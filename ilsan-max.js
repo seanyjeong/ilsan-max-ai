@@ -263,8 +263,13 @@ app.get('/maxai/api/paca/today-unpaid', apiKeyAuth, async (req, res) => {
     const { date } = req.query;
     const targetDate = date || new Date().toISOString().split('T')[0];
 
+    // 요일 계산
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dateObj = new Date(targetDate);
+    const dayOfWeek = dayNames[dateObj.getDay()];
+
     const [rows] = await dbPaca.query(`
-      SELECT DISTINCT s.id, s.name, s.grade, s.phone, sp.final_amount, sp.year_month
+      SELECT DISTINCT s.id, s.name, s.grade
       FROM students s
       JOIN attendance a ON s.id = a.student_id
       JOIN class_schedules cs ON a.class_schedule_id = cs.id
@@ -276,12 +281,11 @@ app.get('/maxai/api/paca/today-unpaid', apiKeyAuth, async (req, res) => {
       ORDER BY s.grade, s.name
     `, [ACADEMY_ID, targetDate]);
 
-    const totalUnpaid = rows.reduce((sum, r) => sum + Number(r.final_amount), 0);
     res.json({
       success: true,
       date: targetDate,
+      dayOfWeek: dayOfWeek,
       data: rows,
-      totalUnpaid,
       count: rows.length
     });
   } catch (err) {
