@@ -55,6 +55,16 @@ app.get('/maxai/health', (req, res) => {
   res.json({ status: 'ok', service: 'ilsan-max-ai' });
 });
 
+// DB 테스트 (디버깅용)
+app.get('/maxai/api/debug/years', apiKeyAuth, async (req, res) => {
+  try {
+    const [rows] = await dbJungsi.query('SELECT DISTINCT 학년도 FROM 정시기본 ORDER BY 학년도 DESC');
+    res.json({ success: true, years: rows.map(r => r.학년도) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 대학 목록 조회
 app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   try {
