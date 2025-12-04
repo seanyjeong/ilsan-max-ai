@@ -665,7 +665,6 @@ app.get('/maxai/api/paca/dashboard', apiKeyAuth, async (req, res) => {
       success: true,
       data: {
         activeStudents: activeCount,
-        monthRevenue: Number(monthRevenue),
         unpaidCount: unpaidCount,
         todayAttendance: todayAttendance
       }
