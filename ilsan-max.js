@@ -702,10 +702,11 @@ app.post('/maxai/chat', async (req, res) => {
       let data = '';
       proxyRes.on('data', chunk => data += chunk);
       proxyRes.on('end', () => {
+        console.log('n8n 응답:', proxyRes.statusCode, data.substring(0, 200));
         try {
           res.json(JSON.parse(data));
         } catch (e) {
-          res.json({ output: data || '응답 파싱 오류' });
+          res.json({ output: data || '응답 파싱 오류 (status: ' + proxyRes.statusCode + ')' });
         }
       });
     });
