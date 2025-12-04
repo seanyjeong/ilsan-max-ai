@@ -116,21 +116,23 @@ app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
 // 대학 검색 (이름으로)
 app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
   try {
-    const { name, year = 2026 } = req.query;
-    console.log('대학검색 요청:', { name, year });
+    let { name, year = 2026 } = req.query;
 
     if (!name) {
       return res.status(400).json({ success: false, message: '대학명 또는 학과명 필요' });
     }
 
-    const query = `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
-       WHERE 학년도 = ? AND (대학명 LIKE ? OR 학과명 LIKE ?)
-       ORDER BY 대학명, 학과명`;
-    const params = [year, `%${name}%`, `%${name}%`];
-    console.log('쿼리:', query, '파라미터:', params);
+    // URL 디코딩 (한글 깨짐 방지)
+    try {
+      name = decodeURIComponent(name);
+    } catch (e) {}
 
-    const [rows] = await dbJungsi.query(query, params);
-    console.log('검색 결과:', rows.length, '개');
+    const [rows] = await dbJungsi.query(
+      `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
+       WHERE 학년도 = ? AND (대학명 LIKE ? OR 학과명 LIKE ?)
+       ORDER BY 대학명, 학과명`,
+      [year, `%${name}%`, `%${name}%`]
+    );
 
     if (rows.length === 0) {
       return res.json({ success: true, data: [], message: '검색 결과 없음' });
