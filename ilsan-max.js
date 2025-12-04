@@ -613,7 +613,7 @@ app.post('/maxai/chat', async (req, res) => {
   try {
     const { chatInput, sessionId } = req.body;
 
-    const response = await fetch('https://n8n.sean8320.dedyn.io/webhook/ilsan-max-ai-chat', {
+    const response = await fetch('https://n8n.sean8320.dedyn.io/webhook/ilsan-max-ai-chat/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
