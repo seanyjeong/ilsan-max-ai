@@ -342,6 +342,43 @@ app.get('/maxai/api/paca/students/search', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 학생 결제 조회 (이름 + 년월로 검색)
+app.get('/maxai/api/paca/students/payment', apiKeyAuth, async (req, res) => {
+  try {
+    let { name, year_month } = req.query;
+    if (!name) {
+      return res.status(400).json({ success: false, message: '학생 이름 필요' });
+    }
+
+    // 년월 기본값: 현재 월
+    if (!year_month) {
+      const now = new Date();
+      year_month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    const [rows] = await dbPaca.query(
+      `SELECT s.id, s.name, s.grade, s.phone,
+              sp.year_month, sp.final_amount, sp.paid_amount,
+              sp.payment_status, sp.due_date, sp.paid_date
+       FROM students s
+       LEFT JOIN student_payments sp ON s.id = sp.student_id AND sp.year_month = ?
+       WHERE s.academy_id = ? AND s.name LIKE ?
+       ORDER BY s.name`,
+      [year_month, ACADEMY_ID, `%${name}%`]
+    );
+
+    res.json({
+      success: true,
+      data: rows,
+      count: rows.length,
+      year_month: year_month
+    });
+  } catch (err) {
+    console.error('학생 결제 조회 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 미납자 조회
 app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
   try {

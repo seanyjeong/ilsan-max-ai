@@ -123,6 +123,7 @@
 | GET /dashboard | 대시보드 요약 |
 | GET /students | 학생 목록 |
 | GET /students/search?name=이름 | 학생 검색 (전화번호 조회) |
+| GET /students/payment?name=이름&year_month=2025-12 | 학생 결제 조회 |
 | GET /unpaid | 전체 미납자 |
 | GET /today-unpaid?date= | 오늘 수업 예정자 중 미납자 |
 | GET /today-attendance?date= | 오늘 수업 예정 학생 |
