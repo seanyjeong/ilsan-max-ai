@@ -271,6 +271,13 @@ app.get('/maxai/api/paca/students/search', apiKeyAuth, async (req, res) => {
 // 미납자 조회
 app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
   try {
+    // 학원 설정에서 납부일 가져오기
+    const [[settings]] = await dbPaca.query(
+      'SELECT tuition_due_day FROM academy_settings WHERE academy_id = ?',
+      [ACADEMY_ID]
+    );
+    const tuitionDueDay = settings?.tuition_due_day || 10;
+
     const [rows] = await dbPaca.query(`
       SELECT s.id, s.name, s.grade, s.phone, sp.final_amount, sp.due_date, sp.year_month
       FROM students s
@@ -280,7 +287,7 @@ app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
     `, [ACADEMY_ID]);
 
     const totalUnpaid = rows.reduce((sum, r) => sum + Number(r.final_amount), 0);
-    res.json({ success: true, data: rows, totalUnpaid, count: rows.length });
+    res.json({ success: true, data: rows, totalUnpaid, count: rows.length, tuitionDueDay });
   } catch (err) {
     console.error('미납자 조회 오류:', err);
     res.status(500).json({ success: false, message: err.message });
