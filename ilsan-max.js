@@ -439,6 +439,46 @@ app.get('/maxai/api/paca/instructors', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 강사 출근 현황 조회
+app.get('/maxai/api/paca/instructor-attendance', apiKeyAuth, async (req, res) => {
+  try {
+    const { date, time_slot } = req.query;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    // 요일 계산
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dateObj = new Date(targetDate);
+    const dayOfWeek = dayNames[dateObj.getDay()];
+
+    let query = `
+      SELECT ia.*, i.name as instructor_name
+      FROM instructor_attendance ia
+      JOIN instructors i ON ia.instructor_id = i.id
+      WHERE i.academy_id = ? AND ia.work_date = ?
+    `;
+    const params = [ACADEMY_ID, targetDate];
+
+    if (time_slot) {
+      query += ' AND ia.time_slot = ?';
+      params.push(time_slot);
+    }
+    query += ' ORDER BY ia.time_slot, i.name';
+
+    const [rows] = await dbPaca.query(query, params);
+
+    res.json({
+      success: true,
+      date: targetDate,
+      dayOfWeek: dayOfWeek,
+      data: rows,
+      count: rows.length
+    });
+  } catch (err) {
+    console.error('강사 출근 조회 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 대시보드 요약 정보
 app.get('/maxai/api/paca/dashboard', apiKeyAuth, async (req, res) => {
   try {
