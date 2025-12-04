@@ -14,8 +14,11 @@
 ## 파일 구조
 ```
 /home/sean/ilsan-max-ai/
-├── ilsan-max.js        # Express API 서버
-├── n8n-workflow.json   # n8n 워크플로우 (import용)
+├── ilsan-max.js                  # Express API 서버
+├── public/
+│   └── index.html                # 채팅 UI 페이지 (https://supermax.kr/maxai/)
+├── n8n-workflow.json             # n8n 워크플로우 (기본)
+├── n8n-workflow-with-memory.json # n8n 워크플로우 (메모리 포함)
 └── CLAUDE.md
 ```
 
@@ -193,16 +196,28 @@ journalctl -u ilsan-max -f  # 로그 확인
 - 한글 URL 인코딩 문제 해결 (decodeURIComponent)
 - 채팅 UI 페이지 추가 (`/maxai/index.html`)
 - n8n 프록시 엔드포인트 추가 (`/maxai/chat`) - CORS 우회
+- **배점표 테이블 렌더링**: 프론트엔드에서 배점표 데이터 감지 시 HTML 테이블로 표시
+- **대화 맥락 유지**: 프론트엔드에서 마지막 검색 대학 정보 저장 (`lastUnivSearch`)
+- n8n Memory 노드 추가 워크플로우 (`n8n-workflow-with-memory.json`)
 
 ### 검색어 처리 로직
 - 단일 검색어: 대학명 OR 학과명에서 LIKE 검색
 - 복수 검색어 (공백 구분): 각 단어가 대학명 OR 학과명에 모두 포함된 결과
 - 예: "국민 스포츠교육" → (대학명 LIKE '%국민%' OR 학과명 LIKE '%국민%') AND (대학명 LIKE '%스포츠교육%' OR 학과명 LIKE '%스포츠교육%')
 
-### 확인 필요한 이슈
-- jungsi DB 데이터 조회가 갑자기 안 됨 (처음엔 됐음)
-- 국민대 스교 검색 → 빈 결과 반환
-- 원인 추정: DB 연결 또는 테이블 조회 문제
+### 프론트엔드 배점표 렌더링 로직
+1. n8n 응답에서 "100점:", "96점:", "배점표" 키워드 감지
+2. 응답에서 대학명 추출 (정규식 패턴)
+   - 패턴1: "성신여자대학교 스포츠과학부(스포츠레저)" → "성신여자 스포츠레저"
+   - 패턴2: "국민대학교 스포츠교육학과" → "국민 스포츠교육"
+3. 추출 실패 시 이전 대화의 `lastUnivSearch` 활용
+4. API 호출해서 배점표 데이터 가져와 HTML 테이블로 렌더링
+
+### n8n 워크플로우 메모리 설정
+- **Window Buffer Memory** 노드 2개 (의도분석, 응답생성 각각)
+- Session Key: `{{ $json.sessionId || 'default' }}`
+- Context Window Length: 10 (최근 10개 대화 기억)
+- 대화 맥락 활용: "성신여대" → "스레 알려줘" 연결 가능
 
 ### 중요: n8n 워크플로우 수동 업데이트 필요!
 n8n-workflow.json 파일은 git으로 관리되지만, 실제 n8n에는 수동 import 필요!
