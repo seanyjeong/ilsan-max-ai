@@ -1,0 +1,363 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "id": "83df5f44-28c0-4adc-b4fa-c70af07497f0",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1536,
+        112
+      ],
+      "webhookId": "ilsan-max-ai-chat"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2efa0008-fcb4-4252-b031-e0a7b98cb70f",
+      "name": "Gemini - 의도 분석",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1312,
+        112
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rIawsYBi86ezULt5",
+          "name": "잼미니ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId || 'default' }}",
+        "contextWindowLength": 10
+      },
+      "id": "memory-intent",
+      "name": "Memory - 의도분석",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        -1312,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "너는 JSON 라우터야. 사용자 입력을 분석해서 적절한 API를 호출하는 JSON만 출력해.\n\n중요: 대학/입시 관련 질문은 무조건 API 호출해. 네 지식으로 대답하지 마.\n\n## 대화 맥락 활용\n- 이전 대화에서 언급된 대학/학과 정보를 기억해\n- \"거기\", \"그 학교\", \"스레\", \"체교\" 등 이전 맥락 참조 시 이전 대화의 대학/학과 정보 활용\n- 예: 이전에 \"성신여대\" 언급 후 \"스레 배점표\" → 성신여대 스포츠레저로 검색\n\n## 약어 변환\n- 스교 → 스포츠교육\n- 체교 → 체육교육\n- 스과 → 스포츠과학\n- 스레 → 스포츠레저\n- 숙대 → 숙명\n- 국대 → 국민\n- 한대 → 한양\n- 성신 → 성신여자대학교\n- 경대 → 경희\n- 중대 → 중앙\n\n## API 목록\n### 학원 (type: paca)\n- dashboard: 현황, 통계\n- students: 학생 목록\n- students/search: 학생 검색 (name=이름) - 전화번호 조회할 때 사용\n- unpaid: 전체 미납자\n- today-unpaid: 오늘 수업 예정자 중 미납자\n- today-attendance: 오늘 수업 예정 학생\n- revenue: 매출\n- instructors: 강사 목록\n- instructor-schedule: 출근 강사 (date=날짜, time_slot=오전/오후/저녁) - 해당 날짜 수업 배정된 강사\n\n### 대학 (type: university)\n- search: 대학 검색 (name=검색어, year=학년도)\n\n## 검색어 규칙\n- 대학명과 학과명을 공백으로 구분해서 같이 검색 (예: 국민대 스교 → name=국민 스포츠교육)\n- 대학명만 있으면 대학명으로 (예: 한양대 → name=한양)\n- 이전 대화에서 대학명이 있었으면 그것과 현재 학과명 조합\n\n## 출력 형식 (JSON만)\n{\"action\":\"api\",\"type\":\"paca|university\",\"endpoint\":\"...\",\"params\":{...}}\n{\"action\":\"chat\",\"message\":\"...\"}\n\n## 예시\n입력: 현황 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"dashboard\",\"params\":{}}\n입력: 오늘 수업인데 미납 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"today-unpaid\",\"params\":{}}\n입력: 국민대 스교 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"국민 스포츠교육\",\"year\":2026}}\n입력: 성신여대 스레 실기배점표 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"성신여자대학교 스포츠레저\",\"year\":2026}}\n입력: (이전: 성신여대 언급) 스레 알려줘 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"성신여자대학교 스포츠레저\",\"year\":2026}}\n입력: 안녕 → {\"action\":\"chat\",\"message\":\"안녕하세요! 일산맥스 AI입니다.\"}"
+        }
+      },
+      "id": "6f9e4e91-738a-47f2-9412-680153d684eb",
+      "name": "AI Agent - 의도분석",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -1088,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = $input.first().json.output;\n// Remove markdown code blocks if present\noutput = output.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst parsed = JSON.parse(output);\nreturn [{ json: parsed }];"
+      },
+      "id": "05bdb019-c2c8-44fc-82a8-037bdd4844e1",
+      "name": "JSON 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "api-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "api",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2e0dd025-b1e6-4e92-9974-fd734451c6ef",
+      "name": "API 호출 필요?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst type = data.type || 'paca';\nconst endpoint = data.endpoint;\nconst params = data.params || {};\n\nlet url;\nif (type === 'university') {\n  url = `https://supermax.kr/maxai/api/universities/${endpoint}`;\n} else {\n  url = `https://supermax.kr/maxai/api/paca/${endpoint}`;\n}\n\n// Build query string\nconst queryParams = Object.entries(params)\n  .filter(([k, v]) => v !== undefined && v !== null && v !== '')\n  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)\n  .join('&');\n\nif (queryParams) {\n  url += '?' + queryParams;\n}\n\nreturn [{ json: { url, params } }];"
+      },
+      "id": "e67e8bdb-bc9e-4725-8ddc-b6eb5578fe49",
+      "name": "URL 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "ilsan-max-ai-key-2024"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dab2b133-50c1-4b9d-9092-d4a64939aaa2",
+      "name": "API 호출",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "0765a203-00c2-4a88-9796-d6fb47083eb3",
+      "name": "Gemini - 응답 생성",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        16,
+        0
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rIawsYBi86ezULt5",
+          "name": "잼미니ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Chat Trigger').item.json.sessionId || 'default' }}",
+        "contextWindowLength": 10
+      },
+      "id": "memory-response",
+      "name": "Memory - 응답생성",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=사용자 질문: {{ $('Chat Trigger').item.json.chatInput }}\n\nAPI 응답 데이터:\n{{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "systemMessage": "너는 일산맥스 체대입시학원 AI 비서야. API에서 받은 데이터를 자연스러운 한국어로 설명해줘.\n\n## 가장 중요한 규칙\n- API에서 받은 데이터만 말해! 날짜, 금액, 이름 등을 절대 추측하거나 지어내지 마!\n- 데이터에 없는 정보는 \"확인되지 않음\"이라고 해\n\n## 응답 규칙\n- 숫자는 읽기 쉽게 (예: 300000 → 30만원)\n- 대학 정보: 수능/실기 비율, 실기종목 명확히\n- today-unpaid는 '오늘 수업 예정인 학생 중 미납자'야\n- unpaid 응답의 tuitionDueDay는 학원 설정 납부일이야. 예: tuitionDueDay=25면 '매월 25일까지 납부'\n- 총액은 말하지 마 (민감정보)\n- 친절하고 간결하게\n- 반드시 텍스트만 출력 (JSON 금지)\n- 모든 데이터 빠짐없이 출력해\n\n## 실기배점표 표시 (중요!)\n종목별로 정렬해서 보여줘. 형식:\n만약에 확인되지 않는거면 보여주지마! \n[종목명]\n100점: 남 OO / 여 OO\n90점: 남 OO / 여 OO\n70점: 남 OO / 여 OO\n50점: 남 OO / 여 OO\n35점: 남 OO / 여 OO\n\n모든 종목, 모든 배점 구간 빠짐없이!"
+        }
+      },
+      "id": "4718d70f-be6e-470f-b297-5453f9d809e7",
+      "name": "AI Agent - 응답생성",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output;\nreturn [{ json: { output: output } }];"
+      },
+      "id": "51ef7712-8029-4b28-9686-b2a59414051e",
+      "name": "API 응답 포맷",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $('JSON 파싱').item.json.message;\nreturn [{ json: { output: message } }];"
+      },
+      "id": "86f6ac73-7635-4e2d-bccc-6c04d5129bc5",
+      "name": "일반대화 응답 포맷",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        208
+      ]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - 의도분석",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - 의도 분석": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - 의도분석",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory - 의도분석": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - 의도분석",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - 의도분석": {
+      "main": [
+        [
+          {
+            "node": "JSON 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON 파싱": {
+      "main": [
+        [
+          {
+            "node": "API 호출 필요?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API 호출 필요?": {
+      "main": [
+        [
+          {
+            "node": "URL 생성",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "일반대화 응답 포맷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL 생성": {
+      "main": [
+        [
+          {
+            "node": "API 호출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API 호출": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - 응답생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - 응답 생성": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - 응답생성",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory - 응답생성": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - 응답생성",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - 응답생성": {
+      "main": [
+        [
+          {
+            "node": "API 응답 포맷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fc27c323bd483460095e258257a1c8b6683814791359a16655b73d393b61a3eb"
+  }
+}
