@@ -669,7 +669,12 @@ app.get('/maxai/api/paca/instructors', apiKeyAuth, async (req, res) => {
 app.get('/maxai/api/paca/instructor-schedule', apiKeyAuth, async (req, res) => {
   try {
     const { date, time_slot } = req.query;
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    // 과거 날짜(2025년 이전)나 이상한 날짜가 들어오면 오늘 날짜 사용
+    let targetDate = today;
+    if (date && date.startsWith('202') && date >= '2025-01-01') {
+      targetDate = date;
+    }
 
     // 한글 time_slot 변환
     const slotMap = { '오전': 'morning', '오후': 'afternoon', '저녁': 'evening' };
