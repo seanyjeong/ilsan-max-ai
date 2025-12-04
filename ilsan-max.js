@@ -368,11 +368,12 @@ app.get('/maxai/api/paca/students/payment', apiKeyAuth, async (req, res) => {
 
     // 학생들의 결제 정보 조회
     const studentIds = students.map(s => s.id);
+    const placeholders = studentIds.map(() => '?').join(',');
     const [payments] = await dbPaca.query(
       `SELECT student_id, year_month, final_amount, paid_amount, payment_status, due_date, paid_date
        FROM student_payments
-       WHERE student_id IN (?) AND year_month = ?`,
-      [studentIds, year_month]
+       WHERE student_id IN (${placeholders}) AND year_month = ?`,
+      [...studentIds, year_month]
     );
 
     // 학생 정보와 결제 정보 합치기
