@@ -1,12 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
+const path = require('path');
 
 const app = express();
 const port = 8321;
 
 app.use(cors());
 app.use(express.json());
+
+// 정적 파일 서빙 (public 폴더)
+app.use('/maxai', express.static(path.join(__dirname, 'public')));
 
 // MySQL 연결 풀 - jungsi (입시 정보)
 const dbJungsi = mysql.createPool({
