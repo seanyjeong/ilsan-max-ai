@@ -475,12 +475,25 @@
 
       let searchText = text.replace(/(배점표?|실기|종목|좀|알려줘|보여줘|뭐야|있어)/g, '').trim();
 
-      // 약어 변환
-      Object.keys(abbreviations).forEach(abbr => {
-        searchText = searchText.replace(new RegExp(abbr, 'g'), abbreviations[abbr]);
+      // 약어 변환 (대학명)
+      const univAbbr = {
+        '숙대': '숙명', '국대': '국민', '한대': '한양', '경대': '경희',
+        '중대': '중앙', '동대': '동국', '건대': '건국', '단대': '단국',
+        '성신여대': '성신', '성신': '성신', '숙명여대': '숙명'
+      };
+      Object.keys(univAbbr).forEach(abbr => {
+        searchText = searchText.replace(new RegExp(abbr, 'g'), univAbbr[abbr]);
       });
 
-      // 대학교, 대 제거하고 정리
+      // 학과 약어 변환
+      const deptAbbr = {
+        '스교': '스포츠교육', '체교': '체육교육', '스과': '스포츠과학', '스레': '스포츠레저'
+      };
+      Object.keys(deptAbbr).forEach(abbr => {
+        searchText = searchText.replace(new RegExp(abbr, 'g'), deptAbbr[abbr]);
+      });
+
+      // "대학교", "대" 제거
       searchText = searchText.replace(/대학교?/g, '').trim();
 
       return searchText || null;
