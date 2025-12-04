@@ -356,21 +356,43 @@ app.get('/maxai/api/paca/students/payment', apiKeyAuth, async (req, res) => {
       year_month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     }
 
-    const [rows] = await dbPaca.query(
-      `SELECT s.id, s.name, s.grade, s.phone,
-              sp.year_month, sp.final_amount, sp.paid_amount,
-              sp.payment_status, sp.due_date, sp.paid_date
-       FROM students s
-       LEFT JOIN student_payments sp ON s.id = sp.student_id AND sp.year_month = ?
-       WHERE s.academy_id = ? AND s.name LIKE ?
-       ORDER BY s.name`,
-      [year_month, ACADEMY_ID, `%${name}%`]
+    // 먼저 학생 찾기
+    const [students] = await dbPaca.query(
+      `SELECT id, name, grade, phone FROM students WHERE academy_id = ? AND name LIKE ?`,
+      [ACADEMY_ID, `%${name}%`]
     );
+
+    if (students.length === 0) {
+      return res.json({ success: true, data: [], count: 0, year_month, message: '학생을 찾을 수 없습니다' });
+    }
+
+    // 학생들의 결제 정보 조회
+    const studentIds = students.map(s => s.id);
+    const [payments] = await dbPaca.query(
+      `SELECT student_id, year_month, final_amount, paid_amount, payment_status, due_date, paid_date
+       FROM student_payments
+       WHERE student_id IN (?) AND year_month = ?`,
+      [studentIds, year_month]
+    );
+
+    // 학생 정보와 결제 정보 합치기
+    const result = students.map(s => {
+      const payment = payments.find(p => p.student_id === s.id);
+      return {
+        ...s,
+        year_month: payment ? payment.year_month : year_month,
+        final_amount: payment ? payment.final_amount : null,
+        paid_amount: payment ? payment.paid_amount : null,
+        payment_status: payment ? payment.payment_status : '결제정보없음',
+        due_date: payment ? payment.due_date : null,
+        paid_date: payment ? payment.paid_date : null
+      };
+    });
 
     res.json({
       success: true,
-      data: rows,
-      count: rows.length,
+      data: result,
+      count: result.length,
       year_month: year_month
     });
   } catch (err) {
