@@ -269,7 +269,7 @@ app.get('/maxai/api/paca/today-unpaid', apiKeyAuth, async (req, res) => {
     const dayOfWeek = dayNames[dateObj.getDay()];
 
     const [rows] = await dbPaca.query(`
-      SELECT DISTINCT s.id, s.name, s.grade
+      SELECT DISTINCT s.id, s.name, s.grade, s.phone, sp.final_amount
       FROM students s
       JOIN attendance a ON s.id = a.student_id
       JOIN class_schedules cs ON a.class_schedule_id = cs.id
