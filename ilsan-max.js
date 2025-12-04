@@ -445,6 +445,10 @@ app.get('/maxai/api/paca/instructor-schedule', apiKeyAuth, async (req, res) => {
     const { date, time_slot } = req.query;
     const targetDate = date || new Date().toISOString().split('T')[0];
 
+    // 한글 time_slot 변환
+    const slotMap = { '오전': 'morning', '오후': 'afternoon', '저녁': 'evening' };
+    const mappedSlot = slotMap[time_slot] || time_slot;
+
     // 요일 계산
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
     const dateObj = new Date(targetDate);
@@ -460,7 +464,7 @@ app.get('/maxai/api/paca/instructor-schedule', apiKeyAuth, async (req, res) => {
 
     if (time_slot) {
       query += ' AND isched.time_slot = ?';
-      params.push(time_slot);
+      params.push(mappedSlot);
     }
     query += ' ORDER BY isched.time_slot, i.name';
 
