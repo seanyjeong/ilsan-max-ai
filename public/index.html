@@ -606,6 +606,20 @@
       sendMessage();
     }
 
+    // 앱 버전 (수정할 때마다 올려주면 세션 자동 초기화)
+    const APP_VERSION = '1.0.1';
+
+    // 버전 체크 및 세션 초기화
+    function checkVersion() {
+      const savedVersion = localStorage.getItem('ilsan-max-version');
+      if (savedVersion !== APP_VERSION) {
+        console.log('버전 업데이트 감지:', savedVersion, '→', APP_VERSION);
+        localStorage.removeItem('ilsan-max-session');
+        localStorage.setItem('ilsan-max-version', APP_VERSION);
+      }
+    }
+    checkVersion();
+
     // 세션 ID 가져오기
     function getSessionId() {
       let sessionId = localStorage.getItem('ilsan-max-session');
