@@ -40,7 +40,7 @@ app.get('/maxai/health', (req, res) => {
 // 대학 목록 조회
 app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   try {
-    const { year = 2025 } = req.query;
+    const { year = 2026 } = req.query;
     const [rows] = await db.query(
       'SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본 WHERE 학년도 = ? ORDER BY 대학명, 학과명',
       [year]
@@ -52,11 +52,11 @@ app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   }
 });
 
-// 대학 상세 정보 (반영비율 포함)
+// 대학 상세 정보 (원본반영표 우선, 없으면 반영비율)
 app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
   try {
     const { uid } = req.params;
-    const { year = 2025 } = req.query;
+    const { year = 2026 } = req.query;
 
     // 기본 정보
     const [basic] = await db.query(
@@ -64,7 +64,13 @@ app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
       [uid, year]
     );
 
-    // 반영비율
+    // 원본반영표 먼저 조회 (보여주기용)
+    const [rawRatio] = await db.query(
+      'SELECT * FROM 정시_원본반영표 WHERE 매칭_U_ID = ? AND 학년도 = ?',
+      [uid, year]
+    );
+
+    // 반영비율 (계산용, 원본반영표에 없는 것 보완)
     const [ratio] = await db.query(
       'SELECT * FROM 정시반영비율 WHERE U_ID = ? AND 학년도 = ?',
       [uid, year]
@@ -72,7 +78,7 @@ app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
 
     // 실기배점
     const [scores] = await db.query(
-      'SELECT * FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ? ORDER BY 종목명, 성별, 기록',
+      'SELECT * FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ? ORDER BY 종목명, 성별, CAST(기록 AS DECIMAL(10,2))',
       [uid, year]
     );
 
@@ -80,8 +86,9 @@ app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
       success: true,
       data: {
         basic: basic[0] || null,
-        ratio: ratio[0] || null,
-        scores: scores
+        rawRatio: rawRatio[0] || null,  // 원본반영표 (보여주기용)
+        ratio: ratio[0] || null,         // 반영비율 (계산용)
+        scores: scores                   // 실기배점표
       }
     });
   } catch (err) {
@@ -93,7 +100,7 @@ app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
 // 실기 점수 계산
 app.post('/maxai/api/calculate-score', apiKeyAuth, async (req, res) => {
   try {
-    const { uid, year = 2025, event, record, gender } = req.body;
+    const { uid, year = 2026, event, record, gender } = req.body;
 
     if (!uid || !event || record === undefined) {
       return res.status(400).json({ success: false, message: 'uid, event, record 필요' });
