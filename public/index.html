@@ -243,6 +243,58 @@
     .chat-messages::-webkit-scrollbar-thumb:hover {
       background: #aaa;
     }
+
+    /* 배점표 테이블 스타일 */
+    .score-tables {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .score-table-section {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .score-table-section h4 {
+      font-size: 0.85rem;
+      color: #667eea;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .score-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .score-table th {
+      background: #667eea;
+      color: white;
+      padding: 6px 8px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .score-table td {
+      padding: 5px 8px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+
+    .score-table tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+
+    .score-table tr:hover {
+      background: #e8e9ff;
+    }
+
+    .message.bot .message-bubble strong {
+      color: #667eea;
+    }
   </style>
 </head>
 <body>
@@ -340,9 +392,98 @@
       return div.innerHTML;
     }
 
+    // 배점표 테이블 생성
+    function createScoreTable(scoreTable, events) {
+      if (!scoreTable || scoreTable.length === 0) return '';
+
+      let html = '<div class="score-tables">';
+
+      events.forEach(event => {
+        const eventScores = scoreTable.filter(s => s.종목명 === event);
+        if (eventScores.length === 0) return;
+
+        // 배점별로 그룹화
+        const scoreMap = {};
+        eventScores.forEach(s => {
+          if (!scoreMap[s.배점]) scoreMap[s.배점] = {};
+          scoreMap[s.배점][s.성별] = s.기록;
+        });
+
+        // 배점 내림차순 정렬
+        const sortedScores = Object.keys(scoreMap).sort((a, b) => Number(b) - Number(a));
+
+        html += `<div class="score-table-section">
+          <h4>${event}</h4>
+          <table class="score-table">
+            <thead><tr><th>배점</th><th>남</th><th>여</th></tr></thead>
+            <tbody>`;
+
+        sortedScores.forEach(score => {
+          html += `<tr>
+            <td>${score}점</td>
+            <td>${scoreMap[score]['남'] || '-'}</td>
+            <td>${scoreMap[score]['여'] || '-'}</td>
+          </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    // 메시지 포맷 (테이블 포함)
+    function formatMessage(text, data) {
+      // API 응답에 배점표가 있으면 테이블로 렌더링
+      if (data && data.data && data.data.scoreTable && data.data.events) {
+        const tableHtml = createScoreTable(data.data.scoreTable, data.data.events);
+        if (tableHtml) {
+          // 기본 정보 + 테이블
+          let info = '';
+          if (data.data.basic) {
+            const b = data.data.basic;
+            info = `<strong>${b.대학명} ${b.학과명}</strong><br>`;
+            if (data.data.ratio) {
+              const r = data.data.ratio;
+              info += `수능 ${r.수능}% / 실기 ${r.실기}%<br>`;
+            }
+            info += `실기종목: ${data.data.events.join(', ')}<br><br>`;
+          }
+          return info + tableHtml;
+        }
+      }
+      return escapeHtml(text);
+    }
+
     // 스크롤 맨 아래로
     function scrollToBottom() {
       chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // 약어 변환
+    const abbreviations = {
+      '스교': '스포츠교육', '체교': '체육교육', '스과': '스포츠과학', '스레': '스포츠레저',
+      '숙대': '숙명', '국대': '국민', '한대': '한양', '성신': '성신여자대학교',
+      '경대': '경희', '중대': '중앙', '동대': '동국', '건대': '건국', '단대': '단국'
+    };
+
+    // 대학 검색어 추출 (배점표/실기 관련)
+    function extractUniversitySearch(text) {
+      // 배점표, 실기 키워드 체크
+      if (!/(배점|실기|종목)/.test(text)) return null;
+
+      let searchText = text.replace(/(배점표?|실기|종목|좀|알려줘|보여줘|뭐야|있어)/g, '').trim();
+
+      // 약어 변환
+      Object.keys(abbreviations).forEach(abbr => {
+        searchText = searchText.replace(new RegExp(abbr, 'g'), abbreviations[abbr]);
+      });
+
+      // 대학교, 대 제거하고 정리
+      searchText = searchText.replace(/대학교?/g, '').trim();
+
+      return searchText || null;
     }
 
     // 메시지 전송
@@ -361,25 +502,55 @@
       addTypingIndicator();
 
       try {
-        const response = await fetch(CHAT_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chatInput: text,
-            sessionId: getSessionId()
-          })
-        });
+        // 배점표 관련 질문인지 체크
+        const univSearch = extractUniversitySearch(text);
 
-        removeTypingIndicator();
+        if (univSearch) {
+          // 대학 API 직접 호출
+          const apiUrl = `/maxai/api/universities/search?name=${encodeURIComponent(univSearch)}&year=2026`;
+          const response = await fetch(apiUrl, {
+            headers: { 'x-api-key': 'ilsan-max-ai-key-2024' }
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          const botMessage = data.output || data.text || data.message || '응답을 받지 못했습니다.';
-          addMessage(botMessage, false);
+          removeTypingIndicator();
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data && data.data.scoreTable) {
+              // 배점표 테이블로 표시
+              const html = formatMessage('', data);
+              addMessageHtml(html);
+            } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+              // 여러 결과 - 목록 표시
+              let msg = `${data.data.length}개 검색됨:\n`;
+              data.data.forEach(u => {
+                msg += `- ${u.대학명} ${u.학과명}\n`;
+              });
+              msg += '\n더 구체적으로 검색해주세요.';
+              addMessage(msg, false);
+            } else {
+              addMessage('검색 결과가 없습니다.', false);
+            }
+          } else {
+            addMessage('검색 중 오류가 발생했습니다.', false);
+          }
         } else {
-          addMessage('죄송합니다. 오류가 발생했습니다.', false);
+          // 일반 질문 - n8n 챗봇으로
+          const response = await fetch(CHAT_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chatInput: text, sessionId: getSessionId() })
+          });
+
+          removeTypingIndicator();
+
+          if (response.ok) {
+            const data = await response.json();
+            const botMessage = data.output || data.text || data.message || '응답을 받지 못했습니다.';
+            addMessage(botMessage, false);
+          } else {
+            addMessage('죄송합니다. 오류가 발생했습니다.', false);
+          }
         }
       } catch (error) {
         console.error('Error:', error);
@@ -389,6 +560,18 @@
 
       sendButton.disabled = false;
       chatInput.focus();
+    }
+
+    // HTML 메시지 추가 (테이블용)
+    function addMessageHtml(html) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message bot';
+      messageDiv.innerHTML = `
+        <div class="message-bubble">${html}</div>
+        <span class="message-time">${formatTime()}</span>
+      `;
+      chatMessages.appendChild(messageDiv);
+      scrollToBottom();
     }
 
     // 빠른 메시지 전송

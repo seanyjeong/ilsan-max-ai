@@ -189,6 +189,15 @@ journalctl -u ilsan-max -f  # 로그 확인
 - 체험생(is_trial=1) 미납 목록에서 제외
 - instructor-schedule API time_slot 한글→영문 변환 (오전/오후/저녁 → morning/afternoon/evening)
 - n8n 응답생성 프롬프트에 "API 데이터만 사용, 지어내지 마" 규칙 추가
+- **대학검색 복수 검색어 지원**: "국민 스포츠교육" → 국민대학교 AND 스포츠교육 둘 다 포함된 결과 검색
+- 한글 URL 인코딩 문제 해결 (decodeURIComponent)
+- 채팅 UI 페이지 추가 (`/maxai/index.html`)
+- n8n 프록시 엔드포인트 추가 (`/maxai/chat`) - CORS 우회
+
+### 검색어 처리 로직
+- 단일 검색어: 대학명 OR 학과명에서 LIKE 검색
+- 복수 검색어 (공백 구분): 각 단어가 대학명 OR 학과명에 모두 포함된 결과
+- 예: "국민 스포츠교육" → (대학명 LIKE '%국민%' OR 학과명 LIKE '%국민%') AND (대학명 LIKE '%스포츠교육%' OR 학과명 LIKE '%스포츠교육%')
 
 ### 확인 필요한 이슈
 - jungsi DB 데이터 조회가 갑자기 안 됨 (처음엔 됐음)
