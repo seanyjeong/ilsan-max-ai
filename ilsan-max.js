@@ -122,10 +122,15 @@ app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: '대학명 또는 학과명 필요' });
     }
 
-    // URL 디코딩 (한글 깨짐 방지)
+    // URL 디코딩 (이중 인코딩된 경우도 처리)
     try {
-      name = decodeURIComponent(name);
+      // 이미 디코딩된 한글인지 확인
+      if (/%[0-9A-Fa-f]{2}/.test(name)) {
+        name = decodeURIComponent(name);
+      }
     } catch (e) {}
+
+    console.log('대학검색:', { name, year });
 
     const [rows] = await dbJungsi.query(
       `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
