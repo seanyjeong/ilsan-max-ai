@@ -275,7 +275,7 @@ app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
       SELECT s.id, s.name, s.grade, s.phone, sp.final_amount, sp.due_date, sp.year_month
       FROM students s
       JOIN student_payments sp ON s.id = sp.student_id
-      WHERE s.academy_id = ? AND s.status = 'active' AND sp.payment_status IN ('pending', 'overdue')
+      WHERE s.academy_id = ? AND s.status = 'active' AND s.is_trial = 0 AND sp.payment_status IN ('pending', 'overdue')
       ORDER BY sp.due_date, s.name
     `, [ACADEMY_ID]);
 
@@ -306,6 +306,7 @@ app.get('/maxai/api/paca/today-unpaid', apiKeyAuth, async (req, res) => {
       JOIN student_payments sp ON s.id = sp.student_id
       WHERE s.academy_id = ?
         AND s.status = 'active'
+        AND s.is_trial = 0
         AND DATE(cs.class_date) = ?
         AND sp.payment_status IN ('pending', 'overdue')
       ORDER BY s.grade, s.name
