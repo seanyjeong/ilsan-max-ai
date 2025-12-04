@@ -79,6 +79,20 @@ app.get('/maxai/api/debug/search', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 전체 대학 목록 (디버깅용)
+app.get('/maxai/api/debug/all', apiKeyAuth, async (req, res) => {
+  try {
+    const { year = 2026 } = req.query;
+    const [rows] = await dbJungsi.query(
+      'SELECT DISTINCT 대학명 FROM 정시기본 WHERE 학년도 = ? ORDER BY 대학명 LIMIT 50',
+      [year]
+    );
+    res.json({ success: true, count: rows.length, universities: rows.map(r => r.대학명) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 대학 목록 조회
 app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   try {
