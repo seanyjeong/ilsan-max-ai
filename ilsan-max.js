@@ -65,6 +65,20 @@ app.get('/maxai/api/debug/years', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 대학명 검색 (디버깅용)
+app.get('/maxai/api/debug/search', apiKeyAuth, async (req, res) => {
+  try {
+    const { name, year = 2026 } = req.query;
+    const [rows] = await dbJungsi.query(
+      'SELECT U_ID, 대학명, 학과명 FROM 정시기본 WHERE 학년도 = ? AND (대학명 LIKE ? OR 학과명 LIKE ?) LIMIT 20',
+      [year, `%${name}%`, `%${name}%`]
+    );
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 대학 목록 조회
 app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   try {
