@@ -41,7 +41,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "너는 일산맥스 체육학원 AI 비서야. 사용자 질문을 분석해서 API 호출이 필요한지 판단해.\n\n## 사용 가능한 API\n### 학원 관리 (base: /maxai/api/paca)\n- dashboard: 대시보드 요약\n- students: 학생 목록 (params: status=active|paused|withdrawn|all)\n- unpaid: 미납자 목록\n- revenue: 매출 조회 (params: year, month)\n- attendance: 출석 현황 (params: date=YYYY-MM-DD)\n- instructors: 강사 목록\n\n### 입시 정보 (base: /maxai/api/universities)\n- search: 대학 검색 (params: name=대학명또는학과명, year=2026)\n\n## 응답 형식 (반드시 JSON만 출력)\n학원 API:\n{\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"dashboard\", \"params\": {}}\n{\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"unpaid\", \"params\": {}}\n{\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"students\", \"params\": {\"status\": \"active\"}}\n\n대학 API:\n{\"action\": \"api\", \"type\": \"university\", \"endpoint\": \"search\", \"params\": {\"name\": \"한양대 스포츠\", \"year\": 2026}}\n\n일반 대화:\n{\"action\": \"chat\", \"message\": \"응답 내용\"}\n\n## 예시\n- \"현황 알려줘\" → {\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"dashboard\", \"params\": {}}\n- \"미납자 누구야\" → {\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"unpaid\", \"params\": {}}\n- \"한양대 스포츠과학부 알려줘\" → {\"action\": \"api\", \"type\": \"university\", \"endpoint\": \"search\", \"params\": {\"name\": \"한양대 스포츠\", \"year\": 2026}}\n- \"26학년도 서울대 체육교육과\" → {\"action\": \"api\", \"type\": \"university\", \"endpoint\": \"search\", \"params\": {\"name\": \"서울대 체육\", \"year\": 2026}}\n- \"안녕\" → {\"action\": \"chat\", \"message\": \"안녕하세요! 일산맥스 AI입니다.\"}"
+          "systemMessage": "너는 JSON 라우터야. 사용자 입력을 분석해서 적절한 API를 호출하는 JSON만 출력해.\n\n중요: 대학/입시 관련 질문은 무조건 API 호출해. 네 지식으로 대답하지 마.\n\n## API 목록\n### 학원 (type: paca)\n- dashboard: 현황, 통계\n- students: 학생 목록\n- unpaid: 전체 미납자\n- today-unpaid: 오늘 수업 대상자 중 미납자\n- revenue: 매출\n- attendance: 출석\n- instructors: 강사\n\n### 대학 (type: university)\n- search: 대학 검색 (name=검색어, year=학년도)\n\n## 출력 형식 (JSON만, 설명 없이)\nAPI: {\"action\":\"api\",\"type\":\"paca|university\",\"endpoint\":\"...\",\"params\":{...}}\n대화: {\"action\":\"chat\",\"message\":\"...\"}\n\n## 예시\n입력: 현황 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"dashboard\",\"params\":{}}\n입력: 미납자 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"unpaid\",\"params\":{}}\n입력: 오늘 수업인데 미납한 학생 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"today-unpaid\",\"params\":{}}\n입력: 오늘 올 애들 중 미납자 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"today-unpaid\",\"params\":{}}\n입력: 숙명여대 체육교육과 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"숙명\",\"year\":2026}}\n입력: 26학년도 한양대 스포츠 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"한양대\",\"year\":2026}}\n입력: 안녕 → {\"action\":\"chat\",\"message\":\"안녕하세요! 일산맥스 AI입니다.\"}"
         }
       },
       "id": "agent-intent",
@@ -52,7 +52,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const output = $input.first().json.output;\nconst parsed = JSON.parse(output);\nreturn [{ json: parsed }];"
+        "jsCode": "let output = $input.first().json.output;\n// Remove markdown code blocks if present\noutput = output.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst parsed = JSON.parse(output);\nreturn [{ json: parsed }];"
       },
       "id": "parse-intent",
       "name": "JSON 파싱",

@@ -257,6 +257,39 @@ app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 오늘 수업 대상자 중 미납자 조회
+app.get('/maxai/api/paca/today-unpaid', apiKeyAuth, async (req, res) => {
+  try {
+    const { date } = req.query;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    const [rows] = await dbPaca.query(`
+      SELECT DISTINCT s.id, s.name, s.grade, s.phone, sp.final_amount, sp.year_month
+      FROM students s
+      JOIN student_schedules ss ON s.id = ss.student_id
+      JOIN class_schedules cs ON ss.class_schedule_id = cs.id
+      JOIN student_payments sp ON s.id = sp.student_id
+      WHERE s.academy_id = ?
+        AND s.status = 'active'
+        AND DATE(cs.class_date) = ?
+        AND sp.payment_status IN ('pending', 'overdue')
+      ORDER BY s.grade, s.name
+    `, [ACADEMY_ID, targetDate]);
+
+    const totalUnpaid = rows.reduce((sum, r) => sum + Number(r.final_amount), 0);
+    res.json({
+      success: true,
+      date: targetDate,
+      data: rows,
+      totalUnpaid,
+      count: rows.length
+    });
+  } catch (err) {
+    console.error('오늘 미납자 조회 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 월별 매출 조회
 app.get('/maxai/api/paca/revenue', apiKeyAuth, async (req, res) => {
   try {
