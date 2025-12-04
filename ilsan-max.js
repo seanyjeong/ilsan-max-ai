@@ -245,6 +245,29 @@ app.get('/maxai/api/paca/students', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 학생 검색 (이름으로)
+app.get('/maxai/api/paca/students/search', apiKeyAuth, async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) {
+      return res.status(400).json({ success: false, message: '학생 이름 필요' });
+    }
+
+    const [rows] = await dbPaca.query(
+      `SELECT id, name, grade, phone, parent_phone, status
+       FROM students
+       WHERE academy_id = ? AND name LIKE ?
+       ORDER BY name`,
+      [ACADEMY_ID, `%${name}%`]
+    );
+
+    res.json({ success: true, data: rows, count: rows.length });
+  } catch (err) {
+    console.error('학생 검색 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 미납자 조회
 app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
   try {
