@@ -668,7 +668,45 @@ app.get('/maxai/api/paca/instructors', apiKeyAuth, async (req, res) => {
 // 강사 스케줄 조회 (해당 날짜에 배정된 강사)
 app.get('/maxai/api/paca/instructor-schedule', apiKeyAuth, async (req, res) => {
   try {
-    const { date, time_slot } = req.query;
+    const { date, time_slot, year_month } = req.query;
+
+    // year_month 파라미터가 있으면 월 전체 조회
+    if (year_month) {
+      const [year, month] = year_month.split('-');
+
+      let query = `
+        SELECT isched.work_date, isched.time_slot, i.name
+        FROM instructor_schedules isched
+        JOIN instructors i ON isched.instructor_id = i.id
+        WHERE i.academy_id = ?
+          AND YEAR(isched.work_date) = ?
+          AND MONTH(isched.work_date) = ?
+          AND i.deleted_at IS NULL
+        ORDER BY isched.work_date, isched.time_slot, i.name
+      `;
+      const [rows] = await dbPaca.query(query, [ACADEMY_ID, year, month]);
+
+      // 강사별 출근 횟수 계산
+      const instructorCounts = {};
+      rows.forEach(row => {
+        if (!instructorCounts[row.name]) {
+          instructorCounts[row.name] = 0;
+        }
+        instructorCounts[row.name]++;
+      });
+
+      const summary = Object.entries(instructorCounts).map(([name, count]) => ({ name, count }));
+      summary.sort((a, b) => b.count - a.count);
+
+      return res.json({
+        success: true,
+        year_month: year_month,
+        data: rows,
+        summary: summary,
+        totalCount: rows.length
+      });
+    }
+
     const today = new Date().toISOString().split('T')[0];
     // 과거 날짜(2025년 이전)나 이상한 날짜가 들어오면 오늘 날짜 사용
     let targetDate = today;

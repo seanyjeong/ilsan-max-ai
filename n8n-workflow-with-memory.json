@@ -5,13 +5,13 @@
         "public": true,
         "options": {}
       },
-      "id": "83df5f44-28c0-4adc-b4fa-c70af07497f0",
+      "id": "6a1417cc-f30b-41d7-8126-88b62215dd06",
       "name": "Chat Trigger",
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.1,
       "position": [
-        -1536,
-        112
+        -2256,
+        -16
       ],
       "webhookId": "ilsan-max-ai-chat"
     },
@@ -19,13 +19,13 @@
       "parameters": {
         "options": {}
       },
-      "id": "2efa0008-fcb4-4252-b031-e0a7b98cb70f",
+      "id": "0eb286cc-bcb8-4f34-a5ab-96f0db4d60db",
       "name": "Gemini - 의도 분석",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -1312,
-        112
+        -2032,
+        -16
       ],
       "credentials": {
         "googlePalmApi": {
@@ -40,13 +40,13 @@
         "sessionKey": "={{ $json.sessionId || 'default' }}",
         "contextWindowLength": 10
       },
-      "id": "memory-intent",
+      "id": "78f0f8ac-a1ee-4fa9-8077-05935e32eb77",
       "name": "Memory - 의도분석",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.2,
       "position": [
-        -1312,
-        300
+        -2032,
+        176
       ]
     },
     {
@@ -54,29 +54,29 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "너는 JSON 라우터야. 사용자 입력을 분석해서 적절한 API를 호출하는 JSON만 출력해.\n\n중요: 대학/입시 관련 질문은 무조건 API 호출해. 네 지식으로 대답하지 마.\n\n## 대화 맥락 활용 (매우 중요!)\n- 이전 대화에서 언급된 정보를 기억하고 활용해\n- \"금액도\", \"전화번호도\", \"자세히\", \"더 알려줘\" 등 추가 정보 요청 시 → 이전과 같은 API 다시 호출\n- 예: 이전에 \"오늘 미납자\" 조회 후 \"금액도 알려줘\" → today-unpaid API 다시 호출\n- 예: 이전에 \"성신여대\" 언급 후 \"스레 배점표\" → 성신여대 스포츠레저로 검색\n\n## 약어 변환\n- 스교 → 스포츠교육\n- 체교 → 체육교육\n- 스과 → 스포츠과학\n- 스레 → 스포츠레저\n- 숙대 → 숙명\n- 국대 → 국민\n- 한대 → 한양\n- 성신 → 성신여자대학교\n- 경대 → 경희\n- 중대 → 중앙\n\n## 종목명 약어 (점수 계산 시)\n- 제멀 → 제자리멀리뛰기\n- 윗몸 → 윗몸일으키기\n- 메볼 → 메디신볼던지기\n- 앉메 → 앉아메디신볼던지기\n- 왕복 → 20m왕복달리기\n\n## API 목록\n### 학원 (type: paca)\n- dashboard: 현황, 통계\n- students: 학생 목록\n- students/search: 학생 검색 (name=이름) - 전화번호 조회할 때 사용\n- students/payment: 학생 결제 조회 (name=이름, year_month=2025-12) - 특정 학생의 결제 여부/상태 조회\n- unpaid: 전체 미납자\n- today-unpaid: 오늘 수업 예정자 중 미납자\n- today-attendance: 오늘 수업 예정 학생\n- revenue: 매출\n- instructors: 강사 목록\n- instructor-schedule: 출근 강사 (time_slot=오전/오후/저녁) - \"오늘\"이면 date 파라미터 생략! 특정 날짜면 date=YYYY-MM-DD\n\n### 대학 (type: university)\n- search: 대학 검색 (name=검색어, year=학년도)\n- score: 실기 점수 계산 (name=대학명, event=종목, record=기록, gender=남/여)\n\n## 검색어 규칙 (매우 중요!)\n- 검색어에는 대학명과 학과명만! \"배점표\", \"실기배점표\", \"알려줘\", \"뭐야\", \"어때\" 같은 단어는 절대 포함하지 마!\n- 대학명과 학과명을 공백으로 구분해서 같이 검색 (예: 국민대 스교 → name=국민 스포츠교육)\n- 대학명만 있으면 대학명으로 (예: 숭실대 배점표 → name=숭실)\n- 이전 대화에서 대학명이 있었으면 그것과 현재 학과명 조합\n\n## 출력 형식 (JSON만)\n{\"action\":\"api\",\"type\":\"paca|university\",\"endpoint\":\"...\",\"params\":{...}}\n{\"action\":\"chat\",\"message\":\"...\"}\n\n## 예시\n입력: 현황 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"dashboard\",\"params\":{}}\n입력: 오늘 수업인데 미납 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"today-unpaid\",\"params\":{}}\n입력: 12월 조영광 결제했어? → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"students/payment\",\"params\":{\"name\":\"조영광\",\"year_month\":\"2025-12\"}}\n입력: 홍길동 이번달 납부? → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"students/payment\",\"params\":{\"name\":\"홍길동\"}}\n입력: 국민대 스교 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"국민 스포츠교육\",\"year\":2026}}\n입력: 성신여대 스레 실기배점표 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"성신여자대학교 스포츠레저\",\"year\":2026}}\n입력: 숭실대 실기배점표 뭐야 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"숭실\",\"year\":2026}}\n입력: (이전: 성신여대 언급) 스레 알려줘 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"성신여자대학교 스포츠레저\",\"year\":2026}}\n입력: 숭실대 남자 제멀 265면 몇점? → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"score\",\"params\":{\"name\":\"숭실\",\"event\":\"제자리멀리뛰기\",\"record\":\"265\",\"gender\":\"남\"}}\n입력: 국민대 스교 여자 윗몸 70개면? → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"score\",\"params\":{\"name\":\"국민 스포츠교육\",\"event\":\"윗몸일으키기\",\"record\":\"70\",\"gender\":\"여\"}}\n입력: 오늘 강사 누구야 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"instructor-schedule\",\"params\":{}}\n입력: 오늘 저녁 강사 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"instructor-schedule\",\"params\":{\"time_slot\":\"저녁\"}}\n입력: 안녕 → {\"action\":\"chat\",\"message\":\"안녕하세요! 일산맥스 AI입니다.\"}"
+          "systemMessage": " 너는 JSON 라우터야. 사용자 입력을 분석해서 적절한 API를 호출하는 JSON만 출력해.\n\n  중요: 대학/입시 관련 질문은 무조건 API 호출해. 네 지식으로 대답하지 마.\n\n  ## 대화 맥락 활용 (매우 중요!)\n  - 이전 대화에서 언급된 정보를 기억하고 활용해\n  - \"금액도\", \"전화번호도\", \"자세히\", \"더 알려줘\" 등 추가 정보 요청 시 → 이전과 같은 API 다시 호출\n  - 예: 이전에 \"오늘 미납자\" 조회 후 \"금액도 알려줘\" → today-unpaid API 다시 호출\n  - 예: 이전에 \"성신여대\" 언급 후 \"스레 배점표\" → 성신여대 스포츠레저로 검색\n\n##만든이\n-넌 일산맥스체대입시의 정으뜸원장님이 만들었어. 매우 잘생기고 마르신분이야\n  ## 약어 변환\n  - 스교 → 스포츠교육\n  - 체교 → 체육교육\n  - 스과 → 스포츠과학\n  - 스레 → 스포츠레저\n  - 숙대 → 숙명\n  - 국대 → 국민\n  - 한대 → 한양\n  - 성신 → 성신여자대학교\n  - 경대 → 경희\n  - 중대 → 중앙\n\n  ## 종목명 약어 (점수 계산 시)\n  - 제멀 → 제자리멀리뛰기\n  - 윗몸 → 윗몸일으키기\n  - 메볼 → 메디신볼던지기\n  - 앉메 → 앉아메디신볼던지기\n  - 왕복 → 20m왕복달리기\n\n  ## API 목록\n  ### 학원 (type: paca)\n  - dashboard: 현황, 통계\n  - students: 학생 목록\n  - students/search: 학생 검색 (name=이름) - 전화번호 조회할 때 사용\n  - students/payment: 학생 결제 조회 (name=이름, year_month=2025-12) - 특정 학생의 결제 여부/상태 조회\n  - unpaid: 전체 미납자\n  - today-unpaid: 오늘 수업 예정자 중 미납자\n  - today-attendance: 수업 예정 학생 - \"오늘\"이면 date 파라미터 생략! 특정 날짜(내일, 모레 등)면 date=YYYY-MM-DD\n  - revenue: 매출\n  - instructors: 강사 목록\n  - instructor-schedule: 출근 강사 (time_slot=오전/오후/저녁) - \"오늘\"이면 date 파라미터 생략! 특정 날짜면 date=YYYY-MM-DD\n\n  ### 대학 (type: university)\n  - search: 대학 검색 (name=검색어, year=학년도)\n  - score: 실기 점수 계산 (name=대학명, event=종목, record=기록, gender=남/여)\n\n  ## 검색어 규칙 (매우 중요!)\n  - 검색어에는 대학명과 학과명만! \"배점표\", \"실기배점표\", \"알려줘\", \"뭐야\", \"어때\" 같은 단어는 절대 포함하지 마!\n  - 대학명과 학과명을 공백으로 구분해서 같이 검색 (예: 국민대 스교 → name=국민 스포츠교육)\n  - 대학명만 있으면 대학명으로 (예: 숭실대 배점표 → name=숭실)\n  - 이전 대화에서 대학명이 있었으면 그것과 현재 학과명 조합\n\n  ## 출력 형식 (JSON만)\n  {\"action\":\"api\",\"type\":\"paca|university\",\"endpoint\":\"...\",\"params\":{...}}\n  {\"action\":\"chat\",\"message\":\"...\"}\n\n  ## 예시\n  입력: 현황 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"dashboard\",\"params\":{}}\n  입력: 오늘 수업인데 미납 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"today-unpaid\",\"params\":{}}\n  입력: 12월 조영광 결제했어? → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"students/payment\",\"params\":{\"name\":\"조영광\",\"year_month\":\"2025-12\"}}\n  입력: 홍길동 이번달 납부? → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"students/payment\",\"params\":{\"name\":\"홍길동\"}}\n  입력: 국민대 스교 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"국민 스포츠교육\",\"year\":2026}}\n  입력: 성신여대 스레 실기배점표 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"성신여자대학교 스포츠레저\",\"year\":2026}}\n  입력: 숭실대 실기배점표 뭐야 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"숭실\",\"year\":2026}}\n  입력: (이전: 성신여대 언급) 스레 알려줘 → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"search\",\"params\":{\"name\":\"성신여자대학교 스포츠레저\",\"year\":2026}}\n  입력: 숭실대 남자 제멀 265면 몇점? → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"score\",\"params\":{\"name\":\"숭실\",\"event\":\"제자리멀리뛰기\",\"record\":\"265\",\"gender\":\"남\"}}\n  입력: 국민대 스교 여자 윗몸 70개면? → {\"action\":\"api\",\"type\":\"university\",\"endpoint\":\"score\",\"params\":{\"name\":\"국민 스포츠교육\",\"event\":\"윗몸일으키기\",\"record\":\"70\",\"gender\":\"여\"}}\n  입력: 오늘 강사 누구야 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"instructor-schedule\",\"params\":{}}\n  입력: 오늘 저녁 강사 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"instructor-schedule\",\"params\":{\"time_slot\":\"저녁\"}}\n  입력: 내일 출석 학생 → {\"action\":\"api\",\"type\":\"paca\",\"endpoint\":\"today-attendance\",\"params\":{\"date\":\"2025-12-05\"}}\n  입력: 안녕 → {\"action\":\"chat\",\"message\":\"안녕하세요! 일산맥스 AI입니다.\"}"
         }
       },
-      "id": "6f9e4e91-738a-47f2-9412-680153d684eb",
+      "id": "e57e650b-e1bc-49c0-8256-44287e31d207",
       "name": "AI Agent - 의도분석",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        -1088,
-        112
+        -1808,
+        -16
       ]
     },
     {
       "parameters": {
         "jsCode": "let output = $input.first().json.output;\n// Remove markdown code blocks if present\noutput = output.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\nconst parsed = JSON.parse(output);\nreturn [{ json: parsed }];"
       },
-      "id": "05bdb019-c2c8-44fc-82a8-037bdd4844e1",
+      "id": "a2cb72f1-ae47-4476-92f0-cd843b11d714",
       "name": "JSON 파싱",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -880,
-        112
+        -1600,
+        -16
       ]
     },
     {
@@ -85,7 +85,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -102,26 +103,26 @@
         },
         "options": {}
       },
-      "id": "2e0dd025-b1e6-4e92-9974-fd734451c6ef",
+      "id": "d3e84d8b-7217-4bf8-8ecb-adf635ace409",
       "name": "API 호출 필요?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        -656,
-        112
+        -1376,
+        -16
       ]
     },
     {
       "parameters": {
         "jsCode": "const data = $input.first().json;\nconst type = data.type || 'paca';\nconst endpoint = data.endpoint;\nconst params = data.params || {};\n\nlet url;\nif (type === 'university') {\n  url = `https://supermax.kr/maxai/api/universities/${endpoint}`;\n} else {\n  url = `https://supermax.kr/maxai/api/paca/${endpoint}`;\n}\n\n// Build query string\nconst queryParams = Object.entries(params)\n  .filter(([k, v]) => v !== undefined && v !== null && v !== '')\n  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)\n  .join('&');\n\nif (queryParams) {\n  url += '?' + queryParams;\n}\n\nreturn [{ json: { url, params } }];"
       },
-      "id": "e67e8bdb-bc9e-4725-8ddc-b6eb5578fe49",
+      "id": "e74bb1a0-b8a4-4ed3-89f5-67b574987669",
       "name": "URL 생성",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -432,
-        0
+        -1152,
+        -128
       ]
     },
     {
@@ -138,26 +139,26 @@
         },
         "options": {}
       },
-      "id": "dab2b133-50c1-4b9d-9092-d4a64939aaa2",
+      "id": "af3b672d-5def-41eb-9743-d1284142e4f4",
       "name": "API 호출",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -208,
-        0
+        -928,
+        -128
       ]
     },
     {
       "parameters": {
         "options": {}
       },
-      "id": "0765a203-00c2-4a88-9796-d6fb47083eb3",
+      "id": "51492f21-c81d-42b7-b0ef-a2650316a8c9",
       "name": "Gemini - 응답 생성",
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        16,
-        0
+        -704,
+        -128
       ],
       "credentials": {
         "googlePalmApi": {
@@ -172,13 +173,13 @@
         "sessionKey": "={{ $('Chat Trigger').item.json.sessionId || 'default' }}",
         "contextWindowLength": 10
       },
-      "id": "memory-response",
+      "id": "876ea7ea-d2ba-4195-802b-6e7613ace2f6",
       "name": "Memory - 응답생성",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.2,
       "position": [
-        16,
-        200
+        -704,
+        80
       ]
     },
     {
@@ -189,39 +190,39 @@
           "systemMessage": "너는 일산맥스 체대입시학원 AI 비서야. API에서 받은 데이터를 자연스러운 한국어로 설명해줘.\n\n## 가장 중요한 규칙\n- API에서 받은 데이터만 말해! 날짜, 금액, 이름 등을 절대 추측하거나 지어내지 마!\n- 데이터에 없는 정보는 \"확인되지 않음\"이라고 해\n\n## 응답 규칙\n- 숫자는 읽기 쉽게 (예: 300000 → 30만원)\n- 대학 정보: 수능/실기 비율, 실기종목 명확히\n- today-unpaid는 '오늘 수업 예정인 학생 중 미납자'야\n- unpaid 응답의 tuitionDueDay는 학원 설정 납부일이야. 예: tuitionDueDay=25면 '매월 25일까지 납부'\n- 총액, 예상 수입, 매출 금액은 말하지 마 (민감정보)\n- 친절하고 간결하게\n- 반드시 텍스트만 출력 (JSON 금지)\n- 모든 데이터 빠짐없이 출력해\n\n## 실기배점표 표시 (중요!)\n종목별로 정렬해서 보여줘. 형식:\n만약에 확인되지 않는거면 보여주지마! \n[종목명]\n100점: 남 OO / 여 OO\n90점: 남 OO / 여 OO\n70점: 남 OO / 여 OO\n50점: 남 OO / 여 OO\n35점: 남 OO / 여 OO\n\n모든 종목, 모든 배점 구간 빠짐없이!"
         }
       },
-      "id": "4718d70f-be6e-470f-b297-5453f9d809e7",
+      "id": "5350f5bc-e7e0-429c-9743-a75220dcccaf",
       "name": "AI Agent - 응답생성",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
       "position": [
-        240,
-        0
+        -480,
+        -128
       ]
     },
     {
       "parameters": {
         "jsCode": "const output = $input.first().json.output;\nreturn [{ json: { output: output } }];"
       },
-      "id": "51ef7712-8029-4b28-9686-b2a59414051e",
+      "id": "4f465285-4289-4d0b-8b1f-e7a8cbee8959",
       "name": "API 응답 포맷",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        0
+        -272,
+        -128
       ]
     },
     {
       "parameters": {
         "jsCode": "const message = $('JSON 파싱').item.json.message;\nreturn [{ json: { output: message } }];"
       },
-      "id": "86f6ac73-7635-4e2d-bccc-6c04d5129bc5",
+      "id": "82a479f6-bea7-444f-b23d-a56f99624d0d",
       "name": "일반대화 응답 포맷",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -432,
-        208
+        -1152,
+        96
       ]
     }
   ],
