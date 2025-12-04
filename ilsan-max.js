@@ -209,6 +209,90 @@ app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 실기 점수 계산 (대학명으로 조회) - GET 버전
+// 주의: 이 라우트는 /universities/:uid 앞에 있어야 함!
+app.get('/maxai/api/universities/score', apiKeyAuth, async (req, res) => {
+  try {
+    let { name, event, record, gender, year = 2026 } = req.query;
+
+    if (!name || !event || record === undefined) {
+      return res.status(400).json({ success: false, message: 'name, event, record 필요' });
+    }
+
+    // URL 디코딩
+    name = decodeURIComponent(name);
+    event = decodeURIComponent(event);
+    if (gender) gender = decodeURIComponent(gender);
+
+    // 종목명 약어 변환
+    const eventMap = {
+      '제멀': '제자리멀리뛰기',
+      '윗몸': '윗몸일으키기',
+      '메볼': '메디신볼던지기',
+      '앉메': '앉아메디신볼던지기',
+      '왕복': '20m왕복달리기',
+      '10m왕복': '10m왕복달리기'
+    };
+    event = eventMap[event] || event;
+
+    // 먼저 대학 검색
+    const searchTerms = name.split(' ').filter(t => t);
+    let whereConditions = searchTerms.map(() => '(대학명 LIKE ? OR 학과명 LIKE ?)').join(' AND ');
+    let searchParams = searchTerms.flatMap(term => [`%${term}%`, `%${term}%`]);
+
+    const [universities] = await dbJungsi.query(
+      `SELECT U_ID, 대학명, 학과명 FROM 정시기본 WHERE 학년도 = ? AND (${whereConditions}) LIMIT 1`,
+      [year, ...searchParams]
+    );
+
+    if (universities.length === 0) {
+      return res.json({ success: false, message: '대학을 찾을 수 없습니다' });
+    }
+
+    const uid = universities[0].U_ID;
+    const univName = universities[0].대학명;
+    const deptName = universities[0].학과명;
+
+    // 해당 종목 배점표 조회
+    let query = 'SELECT * FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ? AND 종목명 = ?';
+    const params = [uid, year, event];
+
+    if (gender) {
+      query += ' AND 성별 = ?';
+      params.push(gender);
+    }
+
+    query += ' ORDER BY CAST(기록 AS DECIMAL(10,2))';
+    const [scoreTable] = await dbJungsi.query(query, params);
+
+    if (scoreTable.length === 0) {
+      return res.json({
+        success: true,
+        score: null,
+        message: `${univName} ${deptName}의 ${event} 배점표가 없습니다`,
+        university: univName,
+        department: deptName
+      });
+    }
+
+    // 점수 계산
+    const score = lookupScore(parseFloat(record), event, scoreTable);
+
+    res.json({
+      success: true,
+      score: score,
+      event: event,
+      record: record,
+      gender: gender || '미지정',
+      university: univName,
+      department: deptName
+    });
+  } catch (err) {
+    console.error('점수 계산 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 대학 상세 정보 (원본반영표 우선, 없으면 반영비율)
 app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
   try {
@@ -287,89 +371,6 @@ app.post('/maxai/api/calculate-score', apiKeyAuth, async (req, res) => {
       score: score,
       event: event,
       record: record
-    });
-  } catch (err) {
-    console.error('점수 계산 오류:', err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// 실기 점수 계산 (대학명으로 조회) - GET 버전
-app.get('/maxai/api/universities/score', apiKeyAuth, async (req, res) => {
-  try {
-    let { name, event, record, gender, year = 2026 } = req.query;
-
-    if (!name || !event || record === undefined) {
-      return res.status(400).json({ success: false, message: 'name, event, record 필요' });
-    }
-
-    // URL 디코딩
-    name = decodeURIComponent(name);
-    event = decodeURIComponent(event);
-    if (gender) gender = decodeURIComponent(gender);
-
-    // 종목명 약어 변환
-    const eventMap = {
-      '제멀': '제자리멀리뛰기',
-      '윗몸': '윗몸일으키기',
-      '메볼': '메디신볼던지기',
-      '앉메': '앉아메디신볼던지기',
-      '왕복': '20m왕복달리기',
-      '10m왕복': '10m왕복달리기'
-    };
-    event = eventMap[event] || event;
-
-    // 먼저 대학 검색
-    const searchTerms = name.split(' ').filter(t => t);
-    let whereConditions = searchTerms.map(() => '(대학명 LIKE ? OR 학과명 LIKE ?)').join(' AND ');
-    let searchParams = searchTerms.flatMap(term => [`%${term}%`, `%${term}%`]);
-
-    const [universities] = await dbJungsi.query(
-      `SELECT U_ID, 대학명, 학과명 FROM 정시기본 WHERE 학년도 = ? AND (${whereConditions}) LIMIT 1`,
-      [year, ...searchParams]
-    );
-
-    if (universities.length === 0) {
-      return res.json({ success: false, message: '대학을 찾을 수 없습니다' });
-    }
-
-    const uid = universities[0].U_ID;
-    const univName = universities[0].대학명;
-    const deptName = universities[0].학과명;
-
-    // 해당 종목 배점표 조회
-    let query = 'SELECT * FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ? AND 종목명 = ?';
-    const params = [uid, year, event];
-
-    if (gender) {
-      query += ' AND 성별 = ?';
-      params.push(gender);
-    }
-
-    query += ' ORDER BY CAST(기록 AS DECIMAL(10,2))';
-    const [scoreTable] = await dbJungsi.query(query, params);
-
-    if (scoreTable.length === 0) {
-      return res.json({
-        success: true,
-        score: null,
-        message: `${univName} ${deptName}의 ${event} 배점표가 없습니다`,
-        university: univName,
-        department: deptName
-      });
-    }
-
-    // 점수 계산
-    const score = lookupScore(parseFloat(record), event, scoreTable);
-
-    res.json({
-      success: true,
-      score: score,
-      event: event,
-      record: record,
-      gender: gender || '미지정',
-      university: univName,
-      department: deptName
     });
   } catch (err) {
     console.error('점수 계산 오류:', err);
