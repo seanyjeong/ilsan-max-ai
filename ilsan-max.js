@@ -104,8 +104,14 @@ app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
         [uid, year]
       );
 
-      const [scores] = await dbJungsi.query(
+      const [eventNames] = await dbJungsi.query(
         'SELECT DISTINCT 종목명 FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ?',
+        [uid, year]
+      );
+
+      // 실기배점표도 가져오기
+      const [scoreTable] = await dbJungsi.query(
+        'SELECT 종목명, 성별, 기록, 배점 FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ? ORDER BY 종목명, 성별, CAST(기록 AS DECIMAL(10,2))',
         [uid, year]
       );
 
@@ -116,7 +122,8 @@ app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
           basic: basic[0] || null,
           rawRatio: rawRatio[0] || null,
           ratio: ratio[0] || null,
-          events: scores.map(s => s.종목명)
+          events: eventNames.map(s => s.종목명),
+          scoreTable: scoreTable
         }
       });
     }
