@@ -305,12 +305,6 @@
     </div>
 
     <div class="chat-messages" id="chatMessages">
-      <div class="message bot">
-        <div class="message-bubble">안녕하세요! 일산맥스 AI입니다.
-
-학원 현황, 미납자, 출석, 강사 스케줄, 대학 입시 정보 등을 물어보세요!</div>
-        <span class="message-time">지금</span>
-      </div>
     </div>
 
     <div class="quick-buttons">
@@ -492,7 +486,12 @@
 
         if (response.ok) {
           const data = await response.json();
-          const botMessage = data.output || data.text || data.message || '응답을 받지 못했습니다.';
+          let botMessage = data.output || data.text || data.message || '응답을 받지 못했습니다.';
+
+          // n8n 에러 메시지 처리
+          if (botMessage.includes('Error in workflow') || botMessage.includes('error') && botMessage.length < 50) {
+            botMessage = '죄송합니다. 처리 중 오류가 발생했습니다. 다시 시도해주세요.';
+          }
 
           // 배점표 데이터가 응답에 있으면 테이블로 렌더링 시도
           const hasScoreData = botMessage.includes('100점:') || botMessage.includes('96점:') || botMessage.includes('배점표');
