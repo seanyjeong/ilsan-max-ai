@@ -361,6 +361,40 @@ app.get('/maxai/api/paca/attendance', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 오늘 수업 예정 학생 수 조회
+app.get('/maxai/api/paca/today-attendance', apiKeyAuth, async (req, res) => {
+  try {
+    const { date } = req.query;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    // 요일 계산
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dateObj = new Date(targetDate);
+    const dayOfWeek = dayNames[dateObj.getDay()];
+
+    const [rows] = await dbPaca.query(`
+      SELECT s.id, s.name, s.grade, a.attendance_status
+      FROM attendance a
+      JOIN students s ON a.student_id = s.id
+      JOIN class_schedules cs ON a.class_schedule_id = cs.id
+      WHERE s.academy_id = ?
+        AND DATE(cs.class_date) = ?
+      ORDER BY s.grade, s.name
+    `, [ACADEMY_ID, targetDate]);
+
+    res.json({
+      success: true,
+      date: targetDate,
+      dayOfWeek: dayOfWeek,
+      data: rows,
+      count: rows.length
+    });
+  } catch (err) {
+    console.error('오늘 출석 조회 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 강사 목록 조회
 app.get('/maxai/api/paca/instructors', apiKeyAuth, async (req, res) => {
   try {
