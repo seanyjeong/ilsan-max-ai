@@ -11,9 +11,10 @@ app.use(express.json());
 // MySQL 연결 풀
 const db = mysql.createPool({
   host: '211.37.174.218',
-  user: 'root',
+  user: 'maxilsan',
   password: 'q141171616!',
   database: 'jungsi',
+  charset: 'utf8mb4',
   waitForConnections: true,
   connectionLimit: 10,
 });
