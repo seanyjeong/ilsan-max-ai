@@ -517,7 +517,16 @@
               }
             }
 
-            // 패턴3: 이전 대화에서 대학 정보 있으면 활용
+            // 패턴3: "숭실대학교 스포츠학부"
+            if (!searchName) {
+              match = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+학부)/);
+              if (match) {
+                searchName = match[1].replace(/대학교?$/, '') + ' ' + match[2].replace(/학부$/, '');
+                console.log('패턴3 매칭:', searchName);
+              }
+            }
+
+            // 패턴4: 이전 대화에서 대학 정보 있으면 활용
             if (!searchName && lastUnivSearch) {
               searchName = lastUnivSearch;
               console.log('이전 대화 맥락 사용:', searchName);
