@@ -344,6 +344,9 @@
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
 
+    // 마지막 검색 대학 정보 저장 (대화 맥락 유지)
+    let lastUnivSearch = null;
+
     // 시간 포맷
     function formatTime() {
       const now = new Date();
@@ -513,7 +516,15 @@
               }
             }
 
+            // 패턴3: 이전 대화에서 대학 정보 있으면 활용
+            if (!searchName && lastUnivSearch) {
+              searchName = lastUnivSearch;
+              console.log('이전 대화 맥락 사용:', searchName);
+            }
+
             if (searchName) {
+              // 대학 정보 저장 (다음 대화에서 활용)
+              lastUnivSearch = searchName;
               console.log('배점표 검색:', searchName);
               try {
                 const apiUrl = `/maxai/api/universities/search?name=${encodeURIComponent(searchName)}&year=2026`;
@@ -531,6 +542,19 @@
               } catch (e) {
                 console.log('API 호출 실패, 텍스트로 표시:', e);
               }
+            }
+          }
+
+          // 응답에서 대학 정보 추출해서 저장 (배점표 없어도)
+          let univMatch = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+(?:학과|학부))\(([가-힣]+)\)/);
+          if (univMatch) {
+            lastUnivSearch = univMatch[1].replace(/대학교?$/, '') + ' ' + univMatch[3];
+            console.log('대학 정보 저장:', lastUnivSearch);
+          } else {
+            univMatch = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+학과)/);
+            if (univMatch) {
+              lastUnivSearch = univMatch[1].replace(/대학교?$/, '') + ' ' + univMatch[2].replace(/학과$/, '');
+              console.log('대학 정보 저장:', lastUnivSearch);
             }
           }
 
