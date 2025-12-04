@@ -1,121 +1,57 @@
 # CLAUDE.md
 
 ## 프로젝트 개요
-일산맥스AI - 일산맥스 체육학원용 AI 어시스턴트
-- P-ACA 학원관리시스템 연동 (academy_id = 2)
-- 정시 입시 정보 DB 연동
+**일산맥스AI** - 일산맥스 체육학원 강사용 AI 어시스턴트
+- 학원 현황, 미납자, 출석, 강사 스케줄 조회
+- 정시 입시 정보 (대학/학과 검색, 실기배점표)
+- 랜덤 지목 기능 (주사위 굴리기)
+- 개발자: 정으뜸 원장님
+
+## 현재 버전
+- **프론트엔드**: v1.2.1
+- **Git**: main 브랜치
 
 ## 기술 스택
-- **백엔드 API**: Express.js (포트 8321, 경로: /maxai)
-- **워크플로우**: n8n (https://n8n.sean8320.dedyn.io/)
-- **LLM**: Google Gemini Pro (n8n AI Agent)
-- **DB**: MySQL (jungsi - 입시정보, paca - 학원관리)
+| 구분 | 기술 | 비고 |
+|------|------|------|
+| 백엔드 API | Express.js | 포트 8321, 경로 /maxai |
+| AI 워크플로우 | n8n | https://n8n.sean8320.dedyn.io/ |
+| LLM | Google Gemini Pro | n8n AI Agent |
+| DB | MySQL | jungsi(입시), paca(학원) |
+| 프론트엔드 | HTML/JS | public/index.html |
 
 ## 파일 구조
 ```
 /home/sean/ilsan-max-ai/
 ├── ilsan-max.js                  # Express API 서버
 ├── public/
-│   └── index.html                # 채팅 UI 페이지 (https://supermax.kr/maxai/)
-├── n8n-workflow.json             # n8n 워크플로우 (기본)
-├── n8n-workflow-with-memory.json # n8n 워크플로우 (메모리 포함)
+│   └── index.html                # 채팅 UI (https://supermax.kr/maxai/)
+├── n8n-workflow-with-memory.json # n8n 워크플로우 (메모리 포함, 현재 사용중)
+├── n8n-workflow.json             # n8n 워크플로우 (기본, 미사용)
 └── CLAUDE.md
 ```
 
-## DB 연결 정보
+## 인증 정보
 
-### jungsi DB (입시 정보)
-- Host: 211.37.174.218
-- User: maxilsan
-- Password: q141171616!
-- Database: jungsi
-- 테이블:
-  - `정시기본` - 대학/학과 기본 정보 (U_ID, 대학명, 학과명, 학년도)
-  - `정시반영비율` - 수능/실기 반영 비율
-  - `정시_원본반영표` - 원본 반영표 (보여주기용)
-  - `정시실기배점` - 실기 종목별 배점표 (종목명, 성별, 기록, 배점)
+### API 인증
+- **Header**: `x-api-key: ilsan-max-ai-key-2024`
 
-### paca DB (학원 관리)
-- Host: 211.37.174.218
-- User: maxilsan
-- Password: q141171616!
-- Database: paca
+### DB 연결
+| DB | Host | User | Password | Database |
+|----|------|------|----------|----------|
+| 입시 | 211.37.174.218 | maxilsan | q141171616! | jungsi |
+| 학원 | 211.37.174.218 | maxilsan | q141171616! | paca |
 
-#### 주요 테이블 구조
+### 서버 SSH
+- **IP**: 211.37.174.218 (cafe24)
+- **계정**: root / Qq141171616!
+- **코드 위치**: /root/supermax/ilsan-max-ai
 
-**students (학생)**
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | int | PK |
-| academy_id | int | 학원 ID |
-| name | varchar(100) | 이름 |
-| phone | varchar(20) | 학생 전화번호 |
-| parent_phone | varchar(20) | 학부모 전화번호 |
-| grade | varchar(20) | 학년 |
-| status | enum | active/paused/graduated/withdrawn |
-| is_trial | tinyint(1) | 체험생 여부 |
-| trial_remaining | int | 남은 체험 횟수 |
-| monthly_tuition | decimal(10,2) | 월 수강료 |
-| class_days | json | 수업 요일 |
-
-**student_payments (학원비)**
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | int | PK |
-| student_id | int | 학생 ID |
-| year_month | varchar(7) | 년월 (2025-12) |
-| final_amount | decimal(10,2) | 최종 금액 |
-| paid_amount | decimal(12,2) | 납부 금액 |
-| payment_status | enum | pending/paid/partial/overdue/cancelled |
-| due_date | date | 납부기한 |
-| paid_date | date | 납부일 |
-
-**instructor_schedules (강사 스케줄 - 출근 배정)**
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | int | PK |
-| academy_id | int | 학원 ID |
-| instructor_id | int | 강사 ID |
-| work_date | date | 근무일 |
-| time_slot | enum | morning/afternoon/evening |
-| scheduled_start_time | time | 시작 시간 |
-| scheduled_end_time | time | 종료 시간 |
-
-**instructors (강사)**
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | int | PK |
-| academy_id | int | 학원 ID |
-| name | varchar(100) | 이름 |
-| phone | varchar(20) | 전화번호 |
-| status | enum | active/on_leave/retired |
-| deleted_at | timestamp | 삭제일 (soft delete) |
-
-**attendance (학생 출석)**
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | int | PK |
-| class_schedule_id | int | 수업 스케줄 ID |
-| student_id | int | 학생 ID |
-| attendance_status | enum | present/absent/late/excused |
-
-**class_schedules (수업 스케줄)**
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| id | int | PK |
-| academy_id | int | 학원 ID |
-| class_date | date | 수업일 |
-| time_slot | enum | morning/afternoon/evening |
-| instructor_id | int | 강사 ID |
+### n8n
+- **URL**: https://n8n.sean8320.dedyn.io/
+- **Gemini API**: 잼미니ai (credential ID: rIawsYBi86ezULt5)
 
 ## API 엔드포인트
-
-### 대학 정보 (/maxai/api/universities)
-| 경로 | 설명 |
-|------|------|
-| GET /search?name=검색어&year=2026 | 대학/학과 검색 |
-| GET /:uid?year=2026 | 대학 상세 정보 |
-| POST /calculate-score | 실기 점수 계산 |
 
 ### 학원 관리 (/maxai/api/paca) - academy_id = 2 고정
 | 경로 | 설명 |
@@ -129,121 +65,151 @@
 | GET /today-attendance?date= | 오늘 수업 예정 학생 |
 | GET /revenue?year=&month= | 매출 조회 |
 | GET /instructors | 강사 목록 |
-| GET /instructor-schedule?date=&time_slot= | 출근 강사 (수업 배정된 강사) |
+| GET /instructor-schedule?date=&time_slot=&year_month= | 출근 강사 조회 |
 
-## API 인증
-- Header: `x-api-key: ilsan-max-ai-key-2024`
+### 대학 정보 (/maxai/api/universities)
+| 경로 | 설명 |
+|------|------|
+| GET /search?name=검색어&year=2026 | 대학/학과 검색 |
+| GET /:uid?year=2026 | 대학 상세 정보 |
+| POST /calculate-score | 실기 점수 계산 |
 
-## n8n 워크플로우 구조
+### 채팅 프록시
+| 경로 | 설명 |
+|------|------|
+| POST /maxai/chat | n8n 챗봇 프록시 (CORS 우회) |
+
+## n8n 워크플로우 구조 (현재)
 
 ```
-Chat Trigger → Gemini(의도분석) → JSON파싱 → IF(API필요?)
-                                                ├─ Yes → URL생성 → HTTP요청 → Gemini(응답생성) → 출력
-                                                └─ No → 일반대화 응답 → 출력
+Chat Trigger → AI Agent(의도분석) → JSON파싱 → IF(API필요?)
+                                                  ├─ Yes → URL생성 → API호출 → IF(랜덤지목?)
+                                                  │                              ├─ Yes → 랜덤선택 Code → AI Agent(응답생성)
+                                                  │                              └─ No → AI Agent(응답생성)
+                                                  └─ No → 일반대화 응답 포맷
 ```
 
-### 의도분석 시스템 프롬프트 핵심
-- 약어 변환: 스교→스포츠교육, 체교→체육교육, 스과→스포츠과학
-- 대학명 약어: 숙대→숙명, 국대→국민, 한대→한양
-- 대학/입시 질문은 무조건 API 호출 (Gemini 지식 사용 금지)
-- JSON 출력: `{"action":"api","type":"university|paca","endpoint":"...","params":{...}}`
+### 주요 노드
+| 노드 | 역할 |
+|------|------|
+| Chat Trigger | 웹훅 (ilsan-max-ai-chat) |
+| AI Agent - 의도분석 | 사용자 입력 → JSON 라우팅 |
+| Memory - 의도분석 | 대화 기록 10개 저장 |
+| JSON 파싱 | AI 출력에서 JSON 추출 |
+| API 호출 필요? | action === "api" 체크 |
+| URL 생성 | API URL 생성 |
+| API 호출 | HTTP Request |
+| 랜덤지목 | random_pick === true 체크 |
+| Code in JavaScript | 주사위 굴리기 (1-99), 원장님 포함 |
+| AI Agent - 응답생성 | API 데이터 → 자연어 응답 |
+| Memory - 응답생성 | 대화 기록 10개 저장 |
 
-### 응답생성 시스템 프롬프트 핵심
-- 숫자 읽기 쉽게 (300000 → 30만원)
-- today-unpaid는 "오늘 수업 예정인 학생 중 미납자"
-- 총액은 말하지 마 (민감정보)
-- 실기배점표는 종목별 표 형태로 표시
+### 랜덤 지목 기능
+- 커피, 점심, 청소 등 "누가 할래?" 질문에 주사위 굴림
+- 출근 강사 + 정으뜸 원장님 중 랜덤 선택
+- 1-99 점수로 가장 높은 사람 당첨
+- 결과: 주사위 점수 전체 공개 + 당첨자 발표
+
+### 의도분석 프롬프트 핵심
+```
+- JSON만 출력! 텍스트 금지!
+- 약어 변환: 스교→스포츠교육, 체교→체육교육, 스레→스포츠레저
+- 대학명 약어: 숙대→숙명, 국대→국민, 한대→한양, 성신→성신여자대학교
+- 종목 약어: 제멀→제자리멀리뛰기, 윗몸→윗몸일으키기
+- 랜덤 지목: random_pick: true 추가
+- 잡담/반응도 JSON으로 처리
+```
+
+### 응답생성 프롬프트 핵심
+```
+- API 데이터만 사용! 추측 금지!
+- 숫자: 300000 → 30만원
+- 실기배점표: 종목별 정렬해서 표시
+- 랜덤지목: diceResults 전체 보여주고 당첨자 발표
+- 총액/매출 금액은 말하지 마 (민감정보)
+```
 
 ## 배포
 
-### 서버 정보
-- **서버**: 211.37.174.218 (cafe24)
-- **SSH**: root / Qq141171616!
-- **코드 위치**: /root/supermax/ilsan-max-ai
-- **서비스명**: ilsan-max
-- **포트**: 8321
-- **nginx**: supermax.kr/maxai → localhost:8321
+### 자동 배포
+- GitHub push → n8n webhook → git pull + systemctl restart
+- Webhook: https://n8n.sean8320.dedyn.io/webhook/ilsan-max-deploy
 
-### 자동 배포 (n8n webhook)
-- GitHub push → n8n webhook 호출 → git pull + systemctl restart ilsan-max
-- Webhook URL: https://n8n.sean8320.dedyn.io/webhook/ilsan-max-deploy
-
-### 수동 배포/재시작
+### 수동 배포
 ```bash
 ssh root@211.37.174.218
 cd /root/supermax/ilsan-max-ai
 git pull
 systemctl restart ilsan-max
-systemctl status ilsan-max
 journalctl -u ilsan-max -f  # 로그 확인
 ```
 
-### n8n 워크플로우 (별도 관리!)
-- n8n-workflow.json은 git으로 관리되지만, **실제 n8n에는 수동 import 필요**
-- n8n 웹(https://n8n.sean8320.dedyn.io/)에서 직접 수정해야 함
-
-## 현재 상태 및 이슈
-
-### 작동 확인된 기능
-- API 서버 실행 (health check OK)
-- P-ACA 학원 데이터 조회 (students, unpaid, attendance 등)
-
-### 최근 수정 (2025-12-04)
-- unpaid API에 `tuitionDueDay` 추가 (academy_settings에서 가져옴)
-- 체험생(is_trial=1) 미납 목록에서 제외
-- instructor-schedule API time_slot 한글→영문 변환 (오전/오후/저녁 → morning/afternoon/evening)
-- n8n 응답생성 프롬프트에 "API 데이터만 사용, 지어내지 마" 규칙 추가
-- **대학검색 복수 검색어 지원**: "국민 스포츠교육" → 국민대학교 AND 스포츠교육 둘 다 포함된 결과 검색
-- 한글 URL 인코딩 문제 해결 (decodeURIComponent)
-- 채팅 UI 페이지 추가 (`/maxai/index.html`)
-- n8n 프록시 엔드포인트 추가 (`/maxai/chat`) - CORS 우회
-- **배점표 테이블 렌더링**: 프론트엔드에서 배점표 데이터 감지 시 HTML 테이블로 표시
-- **대화 맥락 유지**: 프론트엔드에서 마지막 검색 대학 정보 저장 (`lastUnivSearch`)
-- n8n Memory 노드 추가 워크플로우 (`n8n-workflow-with-memory.json`)
-
-### 검색어 처리 로직
-- 단일 검색어: 대학명 OR 학과명에서 LIKE 검색
-- 복수 검색어 (공백 구분): 각 단어가 대학명 OR 학과명에 모두 포함된 결과
-- 예: "국민 스포츠교육" → (대학명 LIKE '%국민%' OR 학과명 LIKE '%국민%') AND (대학명 LIKE '%스포츠교육%' OR 학과명 LIKE '%스포츠교육%')
-
-### 프론트엔드 배점표 렌더링 로직
-1. n8n 응답에서 "100점:", "96점:", "배점표" 키워드 감지
-2. 응답에서 대학명 추출 (정규식 패턴)
-   - 패턴1: "성신여자대학교 스포츠과학부(스포츠레저)" → "성신여자 스포츠레저"
-   - 패턴2: "국민대학교 스포츠교육학과" → "국민 스포츠교육"
-3. 추출 실패 시 이전 대화의 `lastUnivSearch` 활용
-4. API 호출해서 배점표 데이터 가져와 HTML 테이블로 렌더링
-
-### n8n 워크플로우 메모리 설정
-- **Window Buffer Memory** 노드 2개 (의도분석, 응답생성 각각)
-- Session Key: `{{ $json.sessionId || 'default' }}`
-- Context Window Length: 10 (최근 10개 대화 기억)
-- 대화 맥락 활용: "성신여대" → "스레 알려줘" 연결 가능
-
-### 중요: n8n 워크플로우 수동 업데이트 필요!
-n8n-workflow.json 파일은 git으로 관리되지만, 실제 n8n에는 수동 import 필요!
-**응답생성 시스템 메시지에 추가된 내용:**
-```
-## 가장 중요한 규칙
-- API에서 받은 데이터만 말해! 날짜, 금액, 이름 등을 절대 추측하거나 지어내지 마!
-- 데이터에 없는 정보는 "확인되지 않음"이라고 해
-
-## 응답 규칙 추가
-- unpaid 응답의 tuitionDueDay는 학원 설정 납부일이야. 예: tuitionDueDay=25면 '매월 25일까지 납부'
-```
-
-### 디버깅 방법
+### 서비스 관리
 ```bash
-# 서버에서 직접 DB 쿼리 테스트
-mysql -u maxilsan -p'q141171616!' jungsi -e "SELECT COUNT(*) FROM 정시기본 WHERE 학년도 = 2026;"
-
-# ilsan-max-ai 서비스 로그
-journalctl -u ilsan-max-ai -f
-
-# API 직접 테스트
-curl -H "x-api-key: ilsan-max-ai-key-2024" "https://supermax.kr/maxai/api/universities/search?name=국민&year=2026"
+systemctl status ilsan-max
+systemctl restart ilsan-max
+systemctl stop ilsan-max
 ```
 
-## 참고
-- P-ACA 프로젝트: `/home/sean/pacapro` (프론트), `/home/sean/supermax/paca/backend` (백엔드)
-- 기존 정시 시스템: `/home/sean/supermax/jungsi.js`
+## 중요 사항
+
+### n8n 워크플로우 관리
+- `n8n-workflow-with-memory.json`은 git으로 관리
+- **실제 n8n에는 수동 import 필요!**
+- n8n 웹에서 직접 수정 후 JSON export 권장
+
+### DB 테이블 (paca)
+- **students**: 학생 정보 (academy_id = 2)
+- **student_payments**: 결제 정보
+- **instructors**: 강사 정보
+- **instructor_schedules**: 강사 출근 스케줄
+- **class_schedules**: 수업 스케줄
+- **attendance**: 출석 기록
+- **academy_settings**: 학원 설정 (tuition_due_day 등)
+
+### DB 테이블 (jungsi)
+- **정시기본**: 대학/학과 기본 정보
+- **정시반영비율**: 수능/실기 반영 비율
+- **정시실기배점**: 실기 종목별 배점표
+- **정시_원본반영표**: 원본 반영표
+
+## 디버깅
+
+### API 테스트
+```bash
+# 대학 검색
+curl -H "x-api-key: ilsan-max-ai-key-2024" \
+  "https://supermax.kr/maxai/api/universities/search?name=국민&year=2026"
+
+# 미납자 조회
+curl -H "x-api-key: ilsan-max-ai-key-2024" \
+  "https://supermax.kr/maxai/api/paca/unpaid"
+
+# 강사 스케줄
+curl -H "x-api-key: ilsan-max-ai-key-2024" \
+  "https://supermax.kr/maxai/api/paca/instructor-schedule"
+```
+
+### DB 쿼리 테스트
+```bash
+mysql -u maxilsan -p'q141171616!' jungsi -e "SELECT COUNT(*) FROM 정시기본 WHERE 학년도 = 2026;"
+mysql -u maxilsan -p'q141171616!' paca -e "SELECT * FROM instructors WHERE academy_id = 2;"
+```
+
+### 로그 확인
+```bash
+journalctl -u ilsan-max -f
+```
+
+## 관련 프로젝트
+- **P-ACA 프론트**: /home/sean/pacapro
+- **P-ACA 백엔드**: /home/sean/supermax/paca/backend
+- **정시 시스템**: /home/sean/supermax/jungsi.js
+
+## 변경 이력
+| 날짜 | 버전 | 내용 |
+|------|------|------|
+| 2025-12-05 | 1.2.1 | 잡담/반응 JSON 처리 개선 |
+| 2025-12-05 | 1.2.0 | 랜덤 지목 주사위 기능 (1-99, 원장님 포함) |
+| 2025-12-04 | 1.1.x | 랜덤 지목 기본 기능, 강사별 출근 횟수 조회 |
+| 2025-12-04 | 1.0.x | 채팅 UI, 배점표 테이블 렌더링, 메모리 기능 |
