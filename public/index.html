@@ -495,10 +495,30 @@
           const hasScoreData = botMessage.includes('점:') || botMessage.includes('100점') || botMessage.includes('만점');
 
           if (isScoreQuery && hasScoreData) {
-            // n8n 응답에서 대학명 추출 시도
-            const univMatch = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+학과)/);
+            // n8n 응답에서 대학명 추출 시도 (여러 패턴)
+            // 패턴1: "성신여자대학교 스포츠과학부(스포츠레저)"
+            // 패턴2: "국민대학교 스포츠교육학과"
+            let searchName = null;
+
+            // 패턴1: 대학교 학과부(전공)
+            let univMatch = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+(?:학과|학부|과))\(?([가-힣]*)\)?/);
             if (univMatch) {
-              const searchName = univMatch[1].replace('대학교', '') + ' ' + univMatch[2].replace('학과', '');
+              const univ = univMatch[1].replace(/대학교?$/, '');
+              const dept = univMatch[3] || univMatch[2].replace(/학과|학부|과$/, '');
+              searchName = univ + ' ' + dept;
+            }
+
+            // 패턴2: 사용자 입력에서 추출 (약어 변환은 n8n이 했으니 원문 사용)
+            if (!searchName) {
+              // 입력 텍스트에서 대학명+학과명 추출 시도
+              const inputMatch = text.match(/([가-힣]+(?:대|여대)?)\s*([가-힣]+)/);
+              if (inputMatch) {
+                searchName = inputMatch[1] + ' ' + inputMatch[2];
+              }
+            }
+
+            if (searchName) {
+              console.log('배점표 검색:', searchName);
               // API로 배점표 데이터 가져오기
               try {
                 const apiUrl = `/maxai/api/universities/search?name=${encodeURIComponent(searchName)}&year=2026`;
