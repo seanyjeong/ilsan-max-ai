@@ -439,7 +439,7 @@ app.get('/maxai/api/paca/instructors', apiKeyAuth, async (req, res) => {
   }
 });
 
-// 강사 스케줄 조회 (해당 날짜에 수업 있는 강사)
+// 강사 스케줄 조회 (해당 날짜에 배정된 강사)
 app.get('/maxai/api/paca/instructor-schedule', apiKeyAuth, async (req, res) => {
   try {
     const { date, time_slot } = req.query;
@@ -451,18 +451,18 @@ app.get('/maxai/api/paca/instructor-schedule', apiKeyAuth, async (req, res) => {
     const dayOfWeek = dayNames[dateObj.getDay()];
 
     let query = `
-      SELECT DISTINCT i.id, i.name, cs.time_slot
-      FROM class_schedules cs
-      JOIN instructors i ON cs.instructor_id = i.id
-      WHERE i.academy_id = ? AND DATE(cs.class_date) = ?
+      SELECT isched.instructor_id, isched.time_slot, isched.scheduled_start_time, isched.scheduled_end_time, i.name
+      FROM instructor_schedules isched
+      JOIN instructors i ON isched.instructor_id = i.id
+      WHERE i.academy_id = ? AND isched.work_date = ? AND i.deleted_at IS NULL
     `;
     const params = [ACADEMY_ID, targetDate];
 
     if (time_slot) {
-      query += ' AND cs.time_slot = ?';
+      query += ' AND isched.time_slot = ?';
       params.push(time_slot);
     }
-    query += ' ORDER BY cs.time_slot, i.name';
+    query += ' ORDER BY isched.time_slot, i.name';
 
     const [rows] = await dbPaca.query(query, params);
 
