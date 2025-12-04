@@ -606,6 +606,30 @@ function lookupScore(studentRecord, eventName, scoreTable) {
 }
 
 // =============================================
+// n8n 챗봇 프록시 (CORS 우회)
+// =============================================
+
+app.post('/maxai/chat', async (req, res) => {
+  try {
+    const { chatInput, sessionId } = req.body;
+
+    const response = await fetch('https://n8n.sean8320.dedyn.io/webhook/ilsan-max-ai-chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ chatInput, sessionId })
+    });
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('n8n 프록시 오류:', err);
+    res.status(500).json({ output: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// =============================================
 // 서버 시작
 // =============================================
 

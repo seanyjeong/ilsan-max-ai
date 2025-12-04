@@ -287,7 +287,7 @@
   </div>
 
   <script>
-    const N8N_WEBHOOK_URL = 'https://n8n.sean8320.dedyn.io/webhook/ilsan-max-ai-chat';
+    const CHAT_API_URL = '/maxai/chat';
     const chatMessages = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
@@ -361,7 +361,7 @@
       addTypingIndicator();
 
       try {
-        const response = await fetch(N8N_WEBHOOK_URL, {
+        const response = await fetch(CHAT_API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
