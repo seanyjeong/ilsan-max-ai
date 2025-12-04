@@ -180,14 +180,14 @@ app.get('/maxai/api/paca/students', apiKeyAuth, async (req, res) => {
 app.get('/maxai/api/paca/unpaid', apiKeyAuth, async (req, res) => {
   try {
     const [rows] = await dbPaca.query(`
-      SELECT s.id, s.name, s.grade, s.phone, sp.amount, sp.due_date, sp.payment_month
+      SELECT s.id, s.name, s.grade, s.phone, sp.final_amount, sp.due_date, sp.year_month
       FROM students s
       JOIN student_payments sp ON s.id = sp.student_id
-      WHERE s.academy_id = ? AND s.status = 'active' AND sp.status = 'unpaid'
+      WHERE s.academy_id = ? AND s.status = 'active' AND sp.payment_status IN ('pending', 'overdue')
       ORDER BY sp.due_date, s.name
     `, [ACADEMY_ID]);
 
-    const totalUnpaid = rows.reduce((sum, r) => sum + Number(r.amount), 0);
+    const totalUnpaid = rows.reduce((sum, r) => sum + Number(r.final_amount), 0);
     res.json({ success: true, data: rows, totalUnpaid, count: rows.length });
   } catch (err) {
     console.error('미납자 조회 오류:', err);
@@ -202,24 +202,24 @@ app.get('/maxai/api/paca/revenue', apiKeyAuth, async (req, res) => {
 
     let query = `
       SELECT
-        DATE_FORMAT(paid_at, '%Y-%m') as month,
-        SUM(amount) as total,
+        DATE_FORMAT(paid_date, '%Y-%m') as month,
+        SUM(paid_amount) as total,
         COUNT(*) as count
       FROM student_payments
       WHERE student_id IN (SELECT id FROM students WHERE academy_id = ?)
-        AND status = 'paid'
+        AND payment_status = 'paid'
     `;
     const params = [ACADEMY_ID];
 
     if (year && month) {
-      query += ' AND YEAR(paid_at) = ? AND MONTH(paid_at) = ?';
+      query += ' AND YEAR(paid_date) = ? AND MONTH(paid_date) = ?';
       params.push(year, month);
     } else if (year) {
-      query += ' AND YEAR(paid_at) = ?';
+      query += ' AND YEAR(paid_date) = ?';
       params.push(year);
     }
 
-    query += ' GROUP BY DATE_FORMAT(paid_at, "%Y-%m") ORDER BY month DESC';
+    query += ' GROUP BY DATE_FORMAT(paid_date, "%Y-%m") ORDER BY month DESC';
 
     const [rows] = await dbPaca.query(query, params);
     res.json({ success: true, data: rows });
@@ -286,12 +286,12 @@ app.get('/maxai/api/paca/dashboard', apiKeyAuth, async (req, res) => {
 
     // 이번달 매출
     const [[{ monthRevenue }]] = await dbPaca.query(`
-      SELECT COALESCE(SUM(amount), 0) as monthRevenue
+      SELECT COALESCE(SUM(paid_amount), 0) as monthRevenue
       FROM student_payments
       WHERE student_id IN (SELECT id FROM students WHERE academy_id = ?)
-        AND status = 'paid'
-        AND YEAR(paid_at) = YEAR(CURDATE())
-        AND MONTH(paid_at) = MONTH(CURDATE())
+        AND payment_status = 'paid'
+        AND YEAR(paid_date) = YEAR(CURDATE())
+        AND MONTH(paid_date) = MONTH(CURDATE())
     `, [ACADEMY_ID]);
 
     // 미납 건수
@@ -299,7 +299,7 @@ app.get('/maxai/api/paca/dashboard', apiKeyAuth, async (req, res) => {
       SELECT COUNT(*) as unpaidCount
       FROM student_payments sp
       JOIN students s ON sp.student_id = s.id
-      WHERE s.academy_id = ? AND s.status = 'active' AND sp.status = 'unpaid'
+      WHERE s.academy_id = ? AND s.status = 'active' AND sp.payment_status IN ('pending', 'overdue')
     `, [ACADEMY_ID]);
 
     // 오늘 출석
