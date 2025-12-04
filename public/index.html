@@ -517,16 +517,7 @@
               }
             }
 
-            // 패턴3: "숭실대학교 스포츠학부"
-            if (!searchName) {
-              match = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+학부)/);
-              if (match) {
-                searchName = match[1].replace(/대학교?$/, '') + ' ' + match[2].replace(/학부$/, '');
-                console.log('패턴3 매칭:', searchName);
-              }
-            }
-
-            // 패턴4: 이전 대화에서 대학 정보 있으면 활용
+            // 패턴3: 이전 대화에서 대학 정보 있으면 활용
             if (!searchName && lastUnivSearch) {
               searchName = lastUnivSearch;
               console.log('이전 대화 맥락 사용:', searchName);
@@ -537,34 +528,16 @@
               lastUnivSearch = searchName;
               console.log('배점표 검색:', searchName);
               try {
-                // 1. 먼저 search API로 U_ID 찾기
-                const searchUrl = `/maxai/api/universities/search?name=${encodeURIComponent(searchName)}&year=2026`;
-                const searchResp = await fetch(searchUrl, {
+                const apiUrl = `/maxai/api/universities/search?name=${encodeURIComponent(searchName)}&year=2026`;
+                const apiResp = await fetch(apiUrl, {
                   headers: { 'x-api-key': 'ilsan-max-ai-key-2024' }
                 });
-                if (searchResp.ok) {
-                  const searchData = await searchResp.json();
-                  if (searchData.success && searchData.data && searchData.data.length > 0) {
-                    const uid = searchData.data[0].U_ID;
-                    console.log('U_ID 찾음:', uid);
-
-                    // 2. 상세 API로 배점표 가져오기
-                    const detailUrl = `/maxai/api/universities/${uid}?year=2026`;
-                    const detailResp = await fetch(detailUrl, {
-                      headers: { 'x-api-key': 'ilsan-max-ai-key-2024' }
-                    });
-                    if (detailResp.ok) {
-                      const detailData = await detailResp.json();
-                      if (detailData.success && detailData.data && detailData.data.scores && detailData.data.scores.length > 0) {
-                        // scores를 scoreTable로, eventNames를 events로 변환
-                        detailData.data.scoreTable = detailData.data.scores;
-                        const events = [...new Set(detailData.data.scores.map(s => s.종목명))];
-                        detailData.data.events = events;
-                        const html = formatMessage('', detailData);
-                        addMessageHtml(html);
-                        return;
-                      }
-                    }
+                if (apiResp.ok) {
+                  const apiData = await apiResp.json();
+                  if (apiData.success && apiData.data && apiData.data.scoreTable && apiData.data.scoreTable.length > 0) {
+                    const html = formatMessage('', apiData);
+                    addMessageHtml(html);
+                    return;
                   }
                 }
               } catch (e) {
