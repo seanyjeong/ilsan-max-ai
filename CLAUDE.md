@@ -184,10 +184,28 @@ journalctl -u ilsan-max -f  # 로그 확인
 - API 서버 실행 (health check OK)
 - P-ACA 학원 데이터 조회 (students, unpaid, attendance 등)
 
+### 최근 수정 (2025-12-04)
+- unpaid API에 `tuitionDueDay` 추가 (academy_settings에서 가져옴)
+- 체험생(is_trial=1) 미납 목록에서 제외
+- instructor-schedule API time_slot 한글→영문 변환 (오전/오후/저녁 → morning/afternoon/evening)
+- n8n 응답생성 프롬프트에 "API 데이터만 사용, 지어내지 마" 규칙 추가
+
 ### 확인 필요한 이슈
 - jungsi DB 데이터 조회가 갑자기 안 됨 (처음엔 됐음)
 - 국민대 스교 검색 → 빈 결과 반환
 - 원인 추정: DB 연결 또는 테이블 조회 문제
+
+### 중요: n8n 워크플로우 수동 업데이트 필요!
+n8n-workflow.json 파일은 git으로 관리되지만, 실제 n8n에는 수동 import 필요!
+**응답생성 시스템 메시지에 추가된 내용:**
+```
+## 가장 중요한 규칙
+- API에서 받은 데이터만 말해! 날짜, 금액, 이름 등을 절대 추측하거나 지어내지 마!
+- 데이터에 없는 정보는 "확인되지 않음"이라고 해
+
+## 응답 규칙 추가
+- unpaid 응답의 tuitionDueDay는 학원 설정 납부일이야. 예: tuitionDueDay=25면 '매월 25일까지 납부'
+```
 
 ### 디버깅 방법
 ```bash
