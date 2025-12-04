@@ -37,7 +37,73 @@
 - User: maxilsan
 - Password: q141171616!
 - Database: paca
-- 테이블: students, student_payments, attendance, class_schedules, instructors
+
+#### 주요 테이블 구조
+
+**students (학생)**
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | int | PK |
+| academy_id | int | 학원 ID |
+| name | varchar(100) | 이름 |
+| phone | varchar(20) | 학생 전화번호 |
+| parent_phone | varchar(20) | 학부모 전화번호 |
+| grade | varchar(20) | 학년 |
+| status | enum | active/paused/graduated/withdrawn |
+| is_trial | tinyint(1) | 체험생 여부 |
+| trial_remaining | int | 남은 체험 횟수 |
+| monthly_tuition | decimal(10,2) | 월 수강료 |
+| class_days | json | 수업 요일 |
+
+**student_payments (학원비)**
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | int | PK |
+| student_id | int | 학생 ID |
+| year_month | varchar(7) | 년월 (2025-12) |
+| final_amount | decimal(10,2) | 최종 금액 |
+| paid_amount | decimal(12,2) | 납부 금액 |
+| payment_status | enum | pending/paid/partial/overdue/cancelled |
+| due_date | date | 납부기한 |
+| paid_date | date | 납부일 |
+
+**instructor_schedules (강사 스케줄 - 출근 배정)**
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | int | PK |
+| academy_id | int | 학원 ID |
+| instructor_id | int | 강사 ID |
+| work_date | date | 근무일 |
+| time_slot | enum | morning/afternoon/evening |
+| scheduled_start_time | time | 시작 시간 |
+| scheduled_end_time | time | 종료 시간 |
+
+**instructors (강사)**
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | int | PK |
+| academy_id | int | 학원 ID |
+| name | varchar(100) | 이름 |
+| phone | varchar(20) | 전화번호 |
+| status | enum | active/on_leave/retired |
+| deleted_at | timestamp | 삭제일 (soft delete) |
+
+**attendance (학생 출석)**
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | int | PK |
+| class_schedule_id | int | 수업 스케줄 ID |
+| student_id | int | 학생 ID |
+| attendance_status | enum | present/absent/late/excused |
+
+**class_schedules (수업 스케줄)**
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | int | PK |
+| academy_id | int | 학원 ID |
+| class_date | date | 수업일 |
+| time_slot | enum | morning/afternoon/evening |
+| instructor_id | int | 강사 ID |
 
 ## API 엔드포인트
 
