@@ -1,0 +1,291 @@
+{
+  "name": "일산맥스 AI 챗봇",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "chat-trigger",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "webhookId": "ilsan-max-ai-chat"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-pro",
+          "mode": "list",
+          "cachedResultName": "gemini-pro"
+        },
+        "options": {}
+      },
+      "id": "gemini-intent",
+      "name": "Gemini - 의도 분석",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [220, 0],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "너는 일산맥스 체육학원 AI 비서야. 사용자 질문을 분석해서 API 호출이 필요한지 판단해.\n\n## 사용 가능한 API\n### 학원 관리 (base: /maxai/api/paca)\n- dashboard: 대시보드 요약\n- students: 학생 목록 (params: status=active|paused|withdrawn|all)\n- unpaid: 미납자 목록\n- revenue: 매출 조회 (params: year, month)\n- attendance: 출석 현황 (params: date=YYYY-MM-DD)\n- instructors: 강사 목록\n\n### 입시 정보 (base: /maxai/api/universities)\n- search: 대학 검색 (params: name=대학명또는학과명, year=2026)\n\n## 응답 형식 (반드시 JSON만 출력)\n학원 API:\n{\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"dashboard\", \"params\": {}}\n{\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"unpaid\", \"params\": {}}\n{\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"students\", \"params\": {\"status\": \"active\"}}\n\n대학 API:\n{\"action\": \"api\", \"type\": \"university\", \"endpoint\": \"search\", \"params\": {\"name\": \"한양대 스포츠\", \"year\": 2026}}\n\n일반 대화:\n{\"action\": \"chat\", \"message\": \"응답 내용\"}\n\n## 예시\n- \"현황 알려줘\" → {\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"dashboard\", \"params\": {}}\n- \"미납자 누구야\" → {\"action\": \"api\", \"type\": \"paca\", \"endpoint\": \"unpaid\", \"params\": {}}\n- \"한양대 스포츠과학부 알려줘\" → {\"action\": \"api\", \"type\": \"university\", \"endpoint\": \"search\", \"params\": {\"name\": \"한양대 스포츠\", \"year\": 2026}}\n- \"26학년도 서울대 체육교육과\" → {\"action\": \"api\", \"type\": \"university\", \"endpoint\": \"search\", \"params\": {\"name\": \"서울대 체육\", \"year\": 2026}}\n- \"안녕\" → {\"action\": \"chat\", \"message\": \"안녕하세요! 일산맥스 AI입니다.\"}"
+        }
+      },
+      "id": "agent-intent",
+      "name": "AI Agent - 의도분석",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output;\nconst parsed = JSON.parse(output);\nreturn [{ json: parsed }];"
+      },
+      "id": "parse-intent",
+      "name": "JSON 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "api-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "api",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-api",
+      "name": "API 호출 필요?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst type = data.type || 'paca';\nconst endpoint = data.endpoint;\nconst params = data.params || {};\n\nlet url;\nif (type === 'university') {\n  url = `https://supermax.kr/maxai/api/universities/${endpoint}`;\n} else {\n  url = `https://supermax.kr/maxai/api/paca/${endpoint}`;\n}\n\n// Build query string\nconst queryParams = Object.entries(params)\n  .filter(([k, v]) => v !== undefined && v !== null && v !== '')\n  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)\n  .join('&');\n\nif (queryParams) {\n  url += '?' + queryParams;\n}\n\nreturn [{ json: { url, params } }];"
+      },
+      "id": "build-url",
+      "name": "URL 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -100]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "ilsan-max-ai-key-2024"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-api",
+      "name": "API 호출",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -100]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-pro",
+          "mode": "list",
+          "cachedResultName": "gemini-pro"
+        },
+        "options": {}
+      },
+      "id": "gemini-response",
+      "name": "Gemini - 응답 생성",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [1540, -100],
+      "credentials": {
+        "googleGeminiApi": {
+          "id": "",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=사용자 질문: {{ $('Chat Trigger').item.json.chatInput }}\n\nAPI 응답 데이터:\n{{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "systemMessage": "너는 일산맥스 체육학원 AI 비서야. API에서 받은 데이터를 자연스러운 한국어로 설명해줘.\n\n## 응답 규칙\n- 숫자는 읽기 쉽게 (예: 2250000 → 225만원)\n- 대학 정보: 수능/실기 비율, 실기종목 명확히\n- 미납 정보: 총액과 건수 강조\n- 너무 길면 요약\n- 친절하고 간결하게\n- 반드시 텍스트만 출력 (JSON 금지)"
+        }
+      },
+      "id": "agent-response",
+      "name": "AI Agent - 응답생성",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [1760, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output;\nreturn [{ json: { output: output } }];"
+      },
+      "id": "format-api-response",
+      "name": "API 응답 포맷",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, -100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $('JSON 파싱').item.json.message;\nreturn [{ json: { output: message } }];"
+      },
+      "id": "format-chat-response",
+      "name": "일반대화 응답 포맷",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 100]
+    }
+  ],
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - 의도분석",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - 의도 분석": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - 의도분석",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - 의도분석": {
+      "main": [
+        [
+          {
+            "node": "JSON 파싱",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON 파싱": {
+      "main": [
+        [
+          {
+            "node": "API 호출 필요?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API 호출 필요?": {
+      "main": [
+        [
+          {
+            "node": "URL 생성",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "일반대화 응답 포맷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL 생성": {
+      "main": [
+        [
+          {
+            "node": "API 호출",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API 호출": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - 응답생성",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - 응답 생성": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - 응답생성",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - 응답생성": {
+      "main": [
+        [
+          {
+            "node": "API 응답 포맷",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

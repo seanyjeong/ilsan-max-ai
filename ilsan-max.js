@@ -66,6 +66,68 @@ app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   }
 });
 
+// 대학 검색 (이름으로)
+app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
+  try {
+    const { name, year = 2026 } = req.query;
+    if (!name) {
+      return res.status(400).json({ success: false, message: '대학명 또는 학과명 필요' });
+    }
+
+    const [rows] = await dbJungsi.query(
+      `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
+       WHERE 학년도 = ? AND (대학명 LIKE ? OR 학과명 LIKE ?)
+       ORDER BY 대학명, 학과명`,
+      [year, `%${name}%`, `%${name}%`]
+    );
+
+    if (rows.length === 0) {
+      return res.json({ success: true, data: [], message: '검색 결과 없음' });
+    }
+
+    // 첫 번째 결과의 상세 정보도 함께 반환
+    if (rows.length === 1) {
+      const uid = rows[0].U_ID;
+
+      const [basic] = await dbJungsi.query(
+        'SELECT * FROM 정시기본 WHERE U_ID = ? AND 학년도 = ?',
+        [uid, year]
+      );
+
+      const [rawRatio] = await dbJungsi.query(
+        'SELECT * FROM 정시_원본반영표 WHERE 매칭_U_ID = ? AND 학년도 = ?',
+        [uid, year]
+      );
+
+      const [ratio] = await dbJungsi.query(
+        'SELECT * FROM 정시반영비율 WHERE U_ID = ? AND 학년도 = ?',
+        [uid, year]
+      );
+
+      const [scores] = await dbJungsi.query(
+        'SELECT DISTINCT 종목명 FROM 정시실기배점 WHERE U_ID = ? AND 학년도 = ?',
+        [uid, year]
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          university: rows[0],
+          basic: basic[0] || null,
+          rawRatio: rawRatio[0] || null,
+          ratio: ratio[0] || null,
+          events: scores.map(s => s.종목명)
+        }
+      });
+    }
+
+    res.json({ success: true, data: rows, message: `${rows.length}개 검색됨. 더 구체적으로 검색해주세요.` });
+  } catch (err) {
+    console.error('대학 검색 오류:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 대학 상세 정보 (원본반영표 우선, 없으면 반영비율)
 app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
   try {
