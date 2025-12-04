@@ -916,6 +916,59 @@ app.post('/maxai/chat', async (req, res) => {
 });
 
 // =============================================
+// IMAX Student AI 챗봇 프록시 (CORS 우회)
+// =============================================
+
+app.post('/maxai/imax-student-chat', async (req, res) => {
+  try {
+    const { chatInput, sessionId } = req.body;
+
+    const https = require('https');
+    const postData = JSON.stringify({ chatInput, sessionId });
+
+    const options = {
+      hostname: 'n8n.sean8320.dedyn.io',
+      path: '/webhook/imax-student-chat/chat',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      },
+      timeout: 30000
+    };
+
+    const proxyReq = https.request(options, (proxyRes) => {
+      let data = '';
+      proxyRes.on('data', chunk => data += chunk);
+      proxyRes.on('end', () => {
+        console.log('IMAX Student n8n 응답:', proxyRes.statusCode, data.substring(0, 200));
+        try {
+          res.json(JSON.parse(data));
+        } catch (e) {
+          res.json({ output: data || '응답 파싱 오류 (status: ' + proxyRes.statusCode + ')' });
+        }
+      });
+    });
+
+    proxyReq.on('error', (err) => {
+      console.error('IMAX Student n8n 프록시 오류:', err.message);
+      res.status(500).json({ output: 'n8n 연결 오류: ' + err.message });
+    });
+
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy();
+      res.status(500).json({ output: 'n8n 응답 시간 초과' });
+    });
+
+    proxyReq.write(postData);
+    proxyReq.end();
+  } catch (err) {
+    console.error('IMAX Student n8n 프록시 오류:', err);
+    res.status(500).json({ output: '서버 오류: ' + err.message });
+  }
+});
+
+// =============================================
 // 서버 시작
 // =============================================
 
