@@ -683,19 +683,48 @@ app.post('/maxai/chat', async (req, res) => {
   try {
     const { chatInput, sessionId } = req.body;
 
-    const response = await fetch('https://n8n.sean8320.dedyn.io/webhook/ilsan-max-ai-chat/chat', {
+    // Node.js 18+ 내장 fetch 또는 https 모듈 사용
+    const https = require('https');
+    const postData = JSON.stringify({ chatInput, sessionId });
+
+    const options = {
+      hostname: 'n8n.sean8320.dedyn.io',
+      path: '/webhook/ilsan-max-ai-chat/chat',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
       },
-      body: JSON.stringify({ chatInput, sessionId })
+      timeout: 30000
+    };
+
+    const proxyReq = https.request(options, (proxyRes) => {
+      let data = '';
+      proxyRes.on('data', chunk => data += chunk);
+      proxyRes.on('end', () => {
+        try {
+          res.json(JSON.parse(data));
+        } catch (e) {
+          res.json({ output: data || '응답 파싱 오류' });
+        }
+      });
     });
 
-    const data = await response.json();
-    res.json(data);
+    proxyReq.on('error', (err) => {
+      console.error('n8n 프록시 오류:', err.message);
+      res.status(500).json({ output: 'n8n 연결 오류: ' + err.message });
+    });
+
+    proxyReq.on('timeout', () => {
+      proxyReq.destroy();
+      res.status(500).json({ output: 'n8n 응답 시간 초과' });
+    });
+
+    proxyReq.write(postData);
+    proxyReq.end();
   } catch (err) {
     console.error('n8n 프록시 오류:', err);
-    res.status(500).json({ output: '서버 오류가 발생했습니다.' });
+    res.status(500).json({ output: '서버 오류: ' + err.message });
   }
 });
 
