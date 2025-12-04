@@ -124,7 +124,6 @@ app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
 
     // URL 디코딩 (이중 인코딩된 경우도 처리)
     try {
-      // 이미 디코딩된 한글인지 확인
       if (/%[0-9A-Fa-f]{2}/.test(name)) {
         name = decodeURIComponent(name);
       }
@@ -132,12 +131,29 @@ app.get('/maxai/api/universities/search', apiKeyAuth, async (req, res) => {
 
     console.log('대학검색:', { name, year });
 
-    const [rows] = await dbJungsi.query(
-      `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
-       WHERE 학년도 = ? AND (대학명 LIKE ? OR 학과명 LIKE ?)
-       ORDER BY 대학명, 학과명`,
-      [year, `%${name}%`, `%${name}%`]
-    );
+    // 검색어를 공백으로 분리해서 모두 포함된 결과 찾기
+    const terms = name.trim().split(/\s+/).filter(t => t.length > 0);
+
+    let query, params;
+    if (terms.length === 1) {
+      // 단일 검색어
+      query = `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
+         WHERE 학년도 = ? AND (대학명 LIKE ? OR 학과명 LIKE ?)
+         ORDER BY 대학명, 학과명`;
+      params = [year, `%${terms[0]}%`, `%${terms[0]}%`];
+    } else {
+      // 복수 검색어: 대학명에 첫번째, 학과명에 나머지 (또는 둘 다 학과명)
+      const conditions = terms.map(() => `(대학명 LIKE ? OR 학과명 LIKE ?)`).join(' AND ');
+      query = `SELECT DISTINCT U_ID, 대학명, 학과명 FROM 정시기본
+         WHERE 학년도 = ? AND ${conditions}
+         ORDER BY 대학명, 학과명`;
+      params = [year];
+      terms.forEach(t => {
+        params.push(`%${t}%`, `%${t}%`);
+      });
+    }
+
+    const [rows] = await dbJungsi.query(query, params);
 
     if (rows.length === 0) {
       return res.json({ success: true, data: [], message: '검색 결과 없음' });
