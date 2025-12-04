@@ -461,35 +461,7 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // 약어 변환
-    const abbreviations = {
-      '스교': '스포츠교육', '체교': '체육교육', '스과': '스포츠과학', '스레': '스포츠레저',
-      '숙대': '숙명', '국대': '국민', '한대': '한양', '성신': '성신여자대학교',
-      '경대': '경희', '중대': '중앙', '동대': '동국', '건대': '건국', '단대': '단국'
-    };
-
-    // 대학 검색어 추출 (배점표/실기 관련)
-    function extractUniversitySearch(text) {
-      // 배점표, 실기 키워드 체크
-      if (!/(배점|실기|종목)/.test(text)) return null;
-
-      let searchText = text.replace(/(배점표?|실기|종목|좀|알려줘|보여줘|뭐야|있어)/g, '').trim();
-
-      // 학과 약어만 변환 (스교, 체교 등)
-      const deptAbbr = {
-        '스교': '스포츠교육', '체교': '체육교육', '스과': '스포츠과학', '스레': '스포츠레저'
-      };
-      Object.keys(deptAbbr).forEach(abbr => {
-        searchText = searchText.replace(new RegExp(abbr, 'g'), deptAbbr[abbr]);
-      });
-
-      // "대학교", "여대", "대" 제거 → 핵심 키워드만 남김
-      searchText = searchText.replace(/(여자)?대학교?/g, '').trim();
-
-      return searchText || null;
-    }
-
-    // 메시지 전송
+    // 메시지 전송 - 모든 질문을 n8n 챗봇으로 보냄
     async function sendMessage() {
       const text = chatInput.value.trim();
       if (!text) return;
@@ -505,55 +477,52 @@
       addTypingIndicator();
 
       try {
-        // 배점표 관련 질문인지 체크
-        const univSearch = extractUniversitySearch(text);
+        // 모든 질문을 n8n 챗봇으로 보냄 (약어 변환은 n8n/Gemini가 처리)
+        const response = await fetch(CHAT_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chatInput: text, sessionId: getSessionId() })
+        });
 
-        if (univSearch) {
-          // 대학 API 직접 호출
-          const apiUrl = `/maxai/api/universities/search?name=${encodeURIComponent(univSearch)}&year=2026`;
-          const response = await fetch(apiUrl, {
-            headers: { 'x-api-key': 'ilsan-max-ai-key-2024' }
-          });
+        removeTypingIndicator();
 
-          removeTypingIndicator();
+        if (response.ok) {
+          const data = await response.json();
+          const botMessage = data.output || data.text || data.message || '응답을 받지 못했습니다.';
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data && data.data.scoreTable) {
-              // 배점표 테이블로 표시
-              const html = formatMessage('', data);
-              addMessageHtml(html);
-            } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-              // 여러 결과 - 목록 표시
-              let msg = `${data.data.length}개 검색됨:\n`;
-              data.data.forEach(u => {
-                msg += `- ${u.대학명} ${u.학과명}\n`;
-              });
-              msg += '\n더 구체적으로 검색해주세요.';
-              addMessage(msg, false);
-            } else {
-              addMessage('검색 결과가 없습니다.', false);
+          // 배점표 관련 응답이면 테이블로 렌더링 시도
+          const isScoreQuery = /(배점|실기|종목)/.test(text);
+          const hasScoreData = botMessage.includes('점:') || botMessage.includes('100점') || botMessage.includes('만점');
+
+          if (isScoreQuery && hasScoreData) {
+            // n8n 응답에서 대학명 추출 시도
+            const univMatch = botMessage.match(/([가-힣]+대학교?)\s+([가-힣]+학과)/);
+            if (univMatch) {
+              const searchName = univMatch[1].replace('대학교', '') + ' ' + univMatch[2].replace('학과', '');
+              // API로 배점표 데이터 가져오기
+              try {
+                const apiUrl = `/maxai/api/universities/search?name=${encodeURIComponent(searchName)}&year=2026`;
+                const apiResp = await fetch(apiUrl, {
+                  headers: { 'x-api-key': 'ilsan-max-ai-key-2024' }
+                });
+                if (apiResp.ok) {
+                  const apiData = await apiResp.json();
+                  if (apiData.success && apiData.data && apiData.data.scoreTable) {
+                    const html = formatMessage('', apiData);
+                    addMessageHtml(html);
+                    return;
+                  }
+                }
+              } catch (e) {
+                console.log('API 호출 실패, 텍스트로 표시:', e);
+              }
             }
-          } else {
-            addMessage('검색 중 오류가 발생했습니다.', false);
           }
+
+          // 일반 텍스트 응답
+          addMessage(botMessage, false);
         } else {
-          // 일반 질문 - n8n 챗봇으로
-          const response = await fetch(CHAT_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatInput: text, sessionId: getSessionId() })
-          });
-
-          removeTypingIndicator();
-
-          if (response.ok) {
-            const data = await response.json();
-            const botMessage = data.output || data.text || data.message || '응답을 받지 못했습니다.';
-            addMessage(botMessage, false);
-          } else {
-            addMessage('죄송합니다. 오류가 발생했습니다.', false);
-          }
+          addMessage('죄송합니다. 오류가 발생했습니다.', false);
         }
       } catch (error) {
         console.error('Error:', error);
