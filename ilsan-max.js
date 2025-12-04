@@ -266,8 +266,8 @@ app.get('/maxai/api/paca/today-unpaid', apiKeyAuth, async (req, res) => {
     const [rows] = await dbPaca.query(`
       SELECT DISTINCT s.id, s.name, s.grade, s.phone, sp.final_amount, sp.year_month
       FROM students s
-      JOIN student_schedules ss ON s.id = ss.student_id
-      JOIN class_schedules cs ON ss.class_schedule_id = cs.id
+      JOIN attendance a ON s.id = a.student_id
+      JOIN class_schedules cs ON a.class_schedule_id = cs.id
       JOIN student_payments sp ON s.id = sp.student_id
       WHERE s.academy_id = ?
         AND s.status = 'active'
