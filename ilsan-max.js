@@ -28,16 +28,16 @@ const apiKeyAuth = (req, res, next) => {
 };
 
 // =============================================
-// API 엔드포인트
+// API 엔드포인트 (/maxai 경로)
 // =============================================
 
 // 헬스체크
-app.get('/health', (req, res) => {
+app.get('/maxai/health', (req, res) => {
   res.json({ status: 'ok', service: 'ilsan-max-ai' });
 });
 
 // 대학 목록 조회
-app.get('/api/universities', apiKeyAuth, async (req, res) => {
+app.get('/maxai/api/universities', apiKeyAuth, async (req, res) => {
   try {
     const { year = 2025 } = req.query;
     const [rows] = await db.query(
@@ -52,7 +52,7 @@ app.get('/api/universities', apiKeyAuth, async (req, res) => {
 });
 
 // 대학 상세 정보 (반영비율 포함)
-app.get('/api/universities/:uid', apiKeyAuth, async (req, res) => {
+app.get('/maxai/api/universities/:uid', apiKeyAuth, async (req, res) => {
   try {
     const { uid } = req.params;
     const { year = 2025 } = req.query;
@@ -90,7 +90,7 @@ app.get('/api/universities/:uid', apiKeyAuth, async (req, res) => {
 });
 
 // 실기 점수 계산
-app.post('/api/calculate-score', apiKeyAuth, async (req, res) => {
+app.post('/maxai/api/calculate-score', apiKeyAuth, async (req, res) => {
   try {
     const { uid, year = 2025, event, record, gender } = req.body;
 
