@@ -59,7 +59,7 @@
 | GET /today-attendance?date= | 오늘 수업 예정 학생 |
 | GET /revenue?year=&month= | 매출 조회 |
 | GET /instructors | 강사 목록 |
-| GET /instructor-attendance?date=&time_slot= | 강사 출근 현황 |
+| GET /instructor-schedule?date=&time_slot= | 출근 강사 (수업 배정된 강사) |
 
 ## API 인증
 - Header: `x-api-key: ilsan-max-ai-key-2024`
