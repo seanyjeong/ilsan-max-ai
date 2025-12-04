@@ -235,15 +235,16 @@ app.get('/maxai/api/paca/attendance', apiKeyAuth, async (req, res) => {
     const { date, student_id } = req.query;
 
     let query = `
-      SELECT a.*, s.name as student_name
+      SELECT a.*, s.name as student_name, cs.class_date
       FROM attendance a
       JOIN students s ON a.student_id = s.id
+      JOIN class_schedules cs ON a.class_schedule_id = cs.id
       WHERE s.academy_id = ?
     `;
     const params = [ACADEMY_ID];
 
     if (date) {
-      query += ' AND DATE(a.date) = ?';
+      query += ' AND DATE(cs.class_date) = ?';
       params.push(date);
     }
     if (student_id) {
@@ -251,7 +252,7 @@ app.get('/maxai/api/paca/attendance', apiKeyAuth, async (req, res) => {
       params.push(student_id);
     }
 
-    query += ' ORDER BY a.date DESC, s.name LIMIT 100';
+    query += ' ORDER BY cs.class_date DESC, s.name LIMIT 100';
 
     const [rows] = await dbPaca.query(query, params);
     res.json({ success: true, data: rows });
@@ -307,7 +308,8 @@ app.get('/maxai/api/paca/dashboard', apiKeyAuth, async (req, res) => {
       SELECT COUNT(*) as todayAttendance
       FROM attendance a
       JOIN students s ON a.student_id = s.id
-      WHERE s.academy_id = ? AND DATE(a.date) = CURDATE() AND a.status = 'present'
+      JOIN class_schedules cs ON a.class_schedule_id = cs.id
+      WHERE s.academy_id = ? AND DATE(cs.class_date) = CURDATE() AND a.attendance_status = 'present'
     `, [ACADEMY_ID]);
 
     res.json({
