@@ -83,8 +83,32 @@ Chat Trigger → Gemini(의도분석) → JSON파싱 → IF(API필요?)
 - 실기배점표는 종목별 표 형태로 표시
 
 ## 배포
-- supermax 레포에 ilsan-max.js 복사 후 git push
-- n8n webhook으로 자동 배포
+
+### 서버 정보
+- **서버**: 211.37.174.218 (cafe24)
+- **SSH**: root / Qq141171616!
+- **코드 위치**: /root/supermax/ilsan-max-ai
+- **서비스명**: ilsan-max
+- **포트**: 8321
+- **nginx**: supermax.kr/maxai → localhost:8321
+
+### 자동 배포 (n8n webhook)
+- GitHub push → n8n webhook 호출 → git pull + systemctl restart ilsan-max
+- Webhook URL: https://n8n.sean8320.dedyn.io/webhook/ilsan-max-deploy
+
+### 수동 배포/재시작
+```bash
+ssh root@211.37.174.218
+cd /root/supermax/ilsan-max-ai
+git pull
+systemctl restart ilsan-max
+systemctl status ilsan-max
+journalctl -u ilsan-max -f  # 로그 확인
+```
+
+### n8n 워크플로우 (별도 관리!)
+- n8n-workflow.json은 git으로 관리되지만, **실제 n8n에는 수동 import 필요**
+- n8n 웹(https://n8n.sean8320.dedyn.io/)에서 직접 수정해야 함
 
 ## 현재 상태 및 이슈
 
